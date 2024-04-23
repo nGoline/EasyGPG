@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:paddingBottom="8dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <EditText
+                android:id="@+id/editTextAlias"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Enter alias for the key"
+                android:inputType="text"/>
+
+            <EditText
+                android:id="@+id/editTextPublicKey"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Paste public key here"
+                android:inputType="textMultiLine" />
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
