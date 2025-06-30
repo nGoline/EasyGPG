@@ -9,5 +9,13 @@
 
     <string name="menu_home">Home</string>
     <string name="menu_encrypt">Encrypt</string>
+    <string name="menu_decrypt">Decrypt</string>
     <string name="menu_keys">Keys</string>
+    <string name="decrypted_message_will_appear_here">Decrypted message will appear here</string>
+    <string name="encrypt_amp_share"><![CDATA[Encrypt & Share]]></string>
+    <string name="enter_message">Enter message</string>
+    <string name="decrypting">Decrypting…</string>
+    <string name="enter_cipher">Enter cipher</string>
+    <string name="decrypt">Decrypt</string>
+    <string name="waiting_for_encrypted_message">Waiting for encrypted message...</string>
 </resources>

@@ -13,10 +13,14 @@ import android.widget.Spinner
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.ngoline.easygpg.KeyItem
 import com.ngoline.easygpg.PGPKeyManager
 import com.ngoline.easygpg.R
 import com.ngoline.easygpg.databinding.FragmentEncryptBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bouncycastle.bcpg.ArmoredOutputStream
 import org.bouncycastle.openpgp.PGPEncryptedData
 import org.bouncycastle.openpgp.PGPEncryptedDataGenerator
@@ -46,7 +50,11 @@ class EncryptFragment : Fragment() {
         super.onAttach(context)
         keyManager = PGPKeyManager(context)
 
-        keyManager.generateAndSaveKeys()
+        // Only generate keys if they do not exist
+        val secretKeyFile = context.filesDir.resolve("secret_keyring.pgp")
+        if (!secretKeyFile.exists()) {
+            keyManager.generateAndSaveKeys()
+        }
     }
 
     override fun onCreateView(
@@ -71,8 +79,13 @@ class EncryptFragment : Fragment() {
             val selectedIndex = spinnerPublicKeys.selectedItemPosition
             if (selectedIndex != -1 && selectedIndex < publicKeyList.size) {
                 val selectedKey = publicKeyList[selectedIndex]  // Get the public key using the selected index
-                val encryptedMessage = encryptMessage(message, selectedKey)
-                shareEncryptedMessage(encryptedMessage)
+                // Run encryption in a background thread
+                lifecycleScope.launch {
+                    val encryptedMessage = withContext(Dispatchers.Default) {
+                        encryptMessage(message, selectedKey)
+                    }
+                    shareEncryptedMessage(encryptedMessage)
+                }
             } else {
                 Toast.makeText(requireContext(), "No public key selected", Toast.LENGTH_SHORT).show()
             }
@@ -88,9 +101,17 @@ class EncryptFragment : Fragment() {
     private fun loadPublicKeys() {
         val keyItems: MutableList<KeyItem> = keyManager.getAllPublicKeys()
 
-        val aliasesAndKeys: List<Pair<String, PGPPublicKey>> = keyItems.map { keyItem ->
-            val shortFingerprint = Hex.toHexString(keyItem.publicKey.fingerprint).substring(0, 16)
-            "${keyItem.alias} ($shortFingerprint)" to keyItem.publicKey
+        // For each keyring, find all encryption-capable keys
+        val aliasesAndKeys: List<Pair<String, PGPPublicKey>> = keyItems.flatMap { keyItem ->
+            val encryptionKeys = keyItem.publicKeyRing.publicKeys?.asSequence()
+                ?.filter { it.isEncryptionKey }
+                ?.toList()
+                ?: listOf(keyItem.publicKey).filter { it.isEncryptionKey }
+
+            encryptionKeys.map { pubKey ->
+                val shortFingerprint = Hex.toHexString(pubKey.fingerprint).substring(0, 16)
+                "${keyItem.alias} ($shortFingerprint)" to pubKey
+            }
         }
 
         publicKeyList = aliasesAndKeys.map { it.second }
@@ -100,13 +121,15 @@ class EncryptFragment : Fragment() {
         spinnerPublicKeys.adapter = adapter
     }
 
+
+
     private fun encryptMessage(message: String, publicKey: PGPPublicKey): String {
         try {
             val encryptedData = ByteArrayOutputStream()
             val armorStream = ArmoredOutputStream(encryptedData)
 
             val encGen = PGPEncryptedDataGenerator(
-                JcePGPDataEncryptorBuilder(PGPEncryptedData.CAST5)
+                JcePGPDataEncryptorBuilder(PGPEncryptedData.AES_256)
                     .setWithIntegrityPacket(true)
                     .setSecureRandom(SecureRandom())
                     .setProvider("BC")
@@ -115,7 +138,7 @@ class EncryptFragment : Fragment() {
             val keyEncryptionMethodGenerator = JcePublicKeyKeyEncryptionMethodGenerator(publicKey).setProvider("BC")
             encGen.addMethod(keyEncryptionMethodGenerator)
 
-            val encOut = encGen.open(armorStream, ByteArray(0))
+            val encOut = encGen.open(armorStream, ByteArray(4096))
             val lData = PGPLiteralDataGenerator()
             val pOut = lData.open(encOut, PGPLiteralData.BINARY, "filename", message.toByteArray().size.toLong(), Date())
             pOut.write(message.toByteArray())

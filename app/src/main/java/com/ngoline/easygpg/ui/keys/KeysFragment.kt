@@ -22,8 +22,10 @@ import com.ngoline.easygpg.R
 import com.ngoline.easygpg.databinding.FragmentKeysBinding
 import org.bouncycastle.bcpg.ArmoredOutputStream
 import org.bouncycastle.openpgp.PGPPublicKey
+import org.bouncycastle.openpgp.PGPPublicKeyRing
 import org.bouncycastle.util.encoders.Hex
 import java.io.ByteArrayOutputStream
+import kotlin.jvm.java
 
 class KeysFragment() : Fragment() {
 
@@ -73,11 +75,7 @@ class KeysFragment() : Fragment() {
         loadKeys()
 
         copyButton.setOnClickListener {
-            if (publicKeyRing != null) {
-                copyToClipboard(publicKeyRing.publicKey)
-            } else {
-                Toast.makeText(context, "No public key available", Toast.LENGTH_SHORT).show()
-            }
+            copyToClipboard(publicKeyRing);
         }
 
         importButton.setOnClickListener {
@@ -92,10 +90,10 @@ class KeysFragment() : Fragment() {
         _binding = null
     }
 
-    private fun formatPublicKeyForExport(publicKey: PGPPublicKey): String {
+    private fun formatPublicKeyForExport(publicKeyRing: PGPPublicKeyRing): String {
         val out = ByteArrayOutputStream()
         val armoredStream = ArmoredOutputStream(out)
-        publicKey.encode(armoredStream)
+        publicKeyRing.encode(armoredStream)
         armoredStream.close()
         return out.toString("UTF-8")
     }
@@ -104,9 +102,9 @@ class KeysFragment() : Fragment() {
         return String(Hex.encode(key.fingerprint))
     }
 
-    private fun copyToClipboard(publicKey: PGPPublicKey) {
-        val formattedKey = formatPublicKeyForExport(publicKey)
-        val clipboard = context?.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    private fun copyToClipboard(publicKeyRing: PGPPublicKeyRing) {
+        val formattedKey = formatPublicKeyForExport(publicKeyRing)
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clip = ClipData.newPlainText("Public Key", formattedKey)
         clipboard.setPrimaryClip(clip)
         Toast.makeText(context, "Public key copied to clipboard", Toast.LENGTH_SHORT).show()
@@ -126,10 +124,16 @@ class KeysFragment() : Fragment() {
                 val keyData = publicKeyInput.text.toString()
                 if (alias.isNotEmpty() && keyData.isNotEmpty()) {
                     val publicKey = keyManager.importPublicKey(alias, keyData)
-                    val fingerprint = "${String(Hex.encode(publicKey!!.fingerprint)).take(16)}..."
-                    val newKey = KeyItem(alias, fingerprint, publicKey)
-
-                    adapter.addKey(newKey)
+                    val publicKeyRing = keyManager.loadImportedKeyRing(
+                        java.io.File(context.filesDir, "$alias.imported.pgp")
+                    )
+                    if (publicKey != null && publicKeyRing != null) {
+                        val fingerprint = "${String(org.bouncycastle.util.encoders.Hex.encode(publicKey.fingerprint)).take(16)}..."
+                        val newKey = KeyItem(alias, fingerprint, publicKey, publicKeyRing)
+                        adapter.addKey(newKey)
+                    } else {
+                        Toast.makeText(context, "Failed to import key", Toast.LENGTH_SHORT).show()
+                    }
                 } else {
                     Toast.makeText(context, "Alias and public key must not be empty", Toast.LENGTH_SHORT).show()
                 }

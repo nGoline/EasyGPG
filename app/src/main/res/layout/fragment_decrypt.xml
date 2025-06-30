@@ -5,24 +5,28 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="16dp"
-    tools:context=".ui.encrypt.EncryptFragment">
+    tools:context=".ui.decrypt.DecryptFragment">
 
     <EditText
-        android:id="@+id/editTextMessage"
+        android:id="@+id/editTextCipher"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:autofillHints="text"
-        android:hint="@string/enter_message"
+        android:hint="@string/enter_cipher"
         android:inputType="text" />
 
-    <Spinner
-        android:id="@+id/spinnerPublicKeys"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
-
     <Button
-        android:id="@+id/buttonEncryptShare"
+        android:id="@+id/buttonDecrypt"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/encrypt_amp_share" />
+        android:text="@string/decrypt" />
+
+    <TextView
+        android:id="@+id/textViewDecrypted"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="@string/decrypted_message_will_appear_here"
+        android:textIsSelectable="true"
+        android:textSize="18sp" />
 </LinearLayout>

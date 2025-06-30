@@ -13,6 +13,10 @@
             android:icon="@drawable/ic_menu_gallery"
             android:title="@string/menu_encrypt" />
         <item
+            android:id="@+id/nav_decrypt"
+            android:icon="@drawable/ic_menu_gallery"
+            android:title="@string/menu_decrypt" />
+        <item
             android:id="@+id/nav_keys"
             android:icon="@drawable/ic_menu_slideshow"
             android:title="@string/menu_keys" />
