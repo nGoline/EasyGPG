@@ -28,4 +28,9 @@
         android:name="com.ngoline.easygpg.ui.keys.KeysFragment"
         android:label="@string/menu_keys"
         tools:layout="@layout/fragment_keys" />
+
+    <fragment
+        android:id="@+id/nav_settings"
+        android:name="com.ngoline.easygpg.ui.settings.SettingsFragment"
+        android:label="Settings" />
 </navigation>

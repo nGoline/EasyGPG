@@ -14,7 +14,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import com.ngoline.easygpg.KeyItem
+import com.ngoline.easygpg.data.KeyItem
 import com.ngoline.easygpg.PGPKeyManager
 import com.ngoline.easygpg.R
 import com.ngoline.easygpg.databinding.FragmentEncryptBinding
@@ -49,12 +49,6 @@ class EncryptFragment : Fragment() {
     override fun onAttach(context: Context) {
         super.onAttach(context)
         keyManager = PGPKeyManager(context)
-
-        // Only generate keys if they do not exist
-        val secretKeyFile = context.filesDir.resolve("secret_keyring.pgp")
-        if (!secretKeyFile.exists()) {
-            keyManager.generateAndSaveKeys()
-        }
     }
 
     override fun onCreateView(
@@ -85,6 +79,7 @@ class EncryptFragment : Fragment() {
                         encryptMessage(message, selectedKey)
                     }
                     shareEncryptedMessage(encryptedMessage)
+                    editTextMessage.setText("")
                 }
             } else {
                 Toast.makeText(requireContext(), "No public key selected", Toast.LENGTH_SHORT).show()

@@ -1,4 +1,4 @@
-package com.ngoline.easygpg
+package com.ngoline.easygpg.data
 
 import org.bouncycastle.openpgp.PGPPublicKey
 import org.bouncycastle.openpgp.PGPPublicKeyRing

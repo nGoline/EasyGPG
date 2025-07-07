@@ -1,4 +1,4 @@
-package com.ngoline.easygpg
+package com.ngoline.easygpg.notifications
 
 import android.content.BroadcastReceiver
 import android.content.Context

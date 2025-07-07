@@ -10,19 +10,19 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
-import androidx.core.text.set
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.ngoline.easygpg.PGPKeyManager
 import com.ngoline.easygpg.R
 import com.ngoline.easygpg.databinding.FragmentDecryptBinding
-import com.ngoline.easygpg.databinding.FragmentEncryptBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class DecryptFragment : Fragment() {
+
+    private var useYubikey: Boolean = true // Set this based on your app's settings or logic
 
     private var _binding: FragmentDecryptBinding? = null
 
@@ -36,12 +36,6 @@ class DecryptFragment : Fragment() {
     override fun onAttach(context: Context) {
         super.onAttach(context)
         keyManager = PGPKeyManager(context)
-
-        // Only generate keys if they do not exist
-        val secretKeyFile = context.filesDir.resolve("secret_keyring.pgp")
-        if (!secretKeyFile.exists()) {
-            keyManager.generateAndSaveKeys()
-        }
     }
 
     override fun onCreateView(
@@ -56,19 +50,20 @@ class DecryptFragment : Fragment() {
         val root: View = binding.root
 
         editTextMessage = root.findViewById(R.id.editTextCipher)
-        textView = root.findViewById(R.id.textViewDecrypted)
         buttonDecrypt = root.findViewById(R.id.buttonDecrypt)
+        textView = root.findViewById(R.id.textViewDecrypted)
 
         buttonDecrypt.setOnClickListener {
-            buttonDecrypt.isEnabled = false
-            textView.text = getString(R.string.decrypting)
-            val message = editTextMessage.text.toString()
-
-            // Start decryption in a coroutine
+            val encryptedMessage = editTextMessage.text.toString()
+            if (encryptedMessage.isBlank()) {
+                textView.text = getString(R.string.enter_message_to_decrypt)
+                return@setOnClickListener
+            }
             lifecycleScope.launch {
-                textView.text = withContext(Dispatchers.IO) {
-                    decryptText(message)
+                val result = withContext(Dispatchers.IO) {
+                    keyManager.decryptMessage(encryptedMessage)
                 }
+                textView.text = result
             }
         }
 
@@ -91,18 +86,14 @@ class DecryptFragment : Fragment() {
         textView.text = getString(R.string.decrypting)
         lifecycleScope.launch {
             textView.text = withContext(Dispatchers.IO) {
-                decryptText(encryptedMessage)
+                keyManager.decryptMessage(encryptedMessage)
             }
         }
 
         return root
     }
 
-    private fun decryptText(encryptedText: String): String {
-        return try {
-            keyManager.decryptMessage(encryptedText)
-        } catch (e: Exception) {
-            "Decryption failed: ${e.message}"
-        }
+    override fun onDestroy() {
+        super.onDestroy()
     }
 }

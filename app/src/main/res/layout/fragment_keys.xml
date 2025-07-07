@@ -8,25 +8,32 @@
     android:padding="16dp"
     tools:context=".ui.keys.KeysFragment">
 
+
+    <Spinner
+        android:id="@+id/spinnerMyKeys"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:spinnerMode="dropdown" />
     <TextView
         android:id="@+id/publicKeyDisplay"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@android:color/darker_gray"
         android:padding="8dp"
-        android:text="Public Key Appears Here" />
+        android:text="@string/public_key_appears_here" />
 
     <Button
         android:id="@+id/copyButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Copy Public Key" />
+        android:text="@string/copy_public_key" />
 
     <Button
         android:id="@+id/importButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Import Public Key" />
+        android:text="@string/import_public_key" />
 
     <ListView
         android:id="@+id/listViewKeys"

@@ -10,19 +10,25 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ListView
+import android.widget.Spinner
+import android.widget.ArrayAdapter
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
-import com.ngoline.easygpg.KeyAdapter
-import com.ngoline.easygpg.KeyItem
+import com.ngoline.easygpg.data.KeyAdapter
+import com.ngoline.easygpg.data.KeyItem
 import com.ngoline.easygpg.PGPKeyManager
 import com.ngoline.easygpg.R
 import com.ngoline.easygpg.databinding.FragmentKeysBinding
 import org.bouncycastle.bcpg.ArmoredOutputStream
+import org.bouncycastle.openpgp.PGPObjectFactory
 import org.bouncycastle.openpgp.PGPPublicKey
 import org.bouncycastle.openpgp.PGPPublicKeyRing
+import org.bouncycastle.openpgp.PGPSecretKeyRing
+import org.bouncycastle.openpgp.PGPUtil
+import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator
 import org.bouncycastle.util.encoders.Hex
 import java.io.ByteArrayOutputStream
 import kotlin.jvm.java
@@ -36,19 +42,21 @@ class KeysFragment() : Fragment() {
     private lateinit var importButton: Button
     private lateinit var adapter: KeyAdapter
     private lateinit var context: Context
+    private lateinit var spinnerMyKeys: Spinner
 
     private var _binding: FragmentKeysBinding? = null
 
     private val binding get() = _binding!!
     private val keyList = mutableListOf<String>()
 
+    private var selectedKeyItem: KeyItem? = null
+    private var myKeys: List<KeyItem> = emptyList()
+    private var selectedMyKey: KeyItem? = null
+
     override fun onAttach(context: Context) {
         super.onAttach(context)
         // Initialize utilities
         keyManager = PGPKeyManager(requireContext())
-
-        // Generate and save keys
-        keyManager.generateAndSaveKeys()
 
         this.context = context
     }
@@ -68,14 +76,37 @@ class KeysFragment() : Fragment() {
         publicKeyDisplay = root.findViewById(R.id.publicKeyDisplay)
         copyButton = root.findViewById(R.id.copyButton)
         importButton = root.findViewById(R.id.importButton)
+        spinnerMyKeys = root.findViewById(R.id.spinnerMyKeys)
 
-        val publicKeyRing = keyManager.loadPublicKeyRing()
-        publicKeyDisplay.text = getFingerprint(publicKeyRing!!.publicKey)
+        publicKeyDisplay.text = "Select a key to view its fingerprint"
+        copyButton.isEnabled = false
 
+        loadMyKeys()
         loadKeys()
 
+        // Spinner selection logic
+        spinnerMyKeys.setOnItemSelectedListener(object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>, view: View?, position: Int, id: Long) {
+                selectedMyKey = myKeys.getOrNull(position)
+                if (selectedMyKey != null) {
+                    publicKeyDisplay.text = getFingerprint(selectedMyKey!!.publicKey)
+                    copyButton.isEnabled = true
+                } else {
+                    publicKeyDisplay.text = getString(R.string.select_a_key_to_view_its_fingerprint)
+                    copyButton.isEnabled = false
+                }
+            }
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>) {
+                selectedMyKey = null
+                publicKeyDisplay.text = getString(R.string.select_a_key_to_view_its_fingerprint)
+                copyButton.isEnabled = false
+            }
+        })
+
         copyButton.setOnClickListener {
-            copyToClipboard(publicKeyRing);
+            selectedMyKey?.let {
+                copyToClipboard(it.publicKeyRing)
+            }
         }
 
         importButton.setOnClickListener {
@@ -128,7 +159,7 @@ class KeysFragment() : Fragment() {
                         java.io.File(context.filesDir, "$alias.imported.pgp")
                     )
                     if (publicKey != null && publicKeyRing != null) {
-                        val fingerprint = "${String(org.bouncycastle.util.encoders.Hex.encode(publicKey.fingerprint)).take(16)}..."
+                        val fingerprint = "${String(Hex.encode(publicKey.fingerprint)).take(16)}..."
                         val newKey = KeyItem(alias, fingerprint, publicKey, publicKeyRing)
                         adapter.addKey(newKey)
                     } else {
@@ -143,8 +174,18 @@ class KeysFragment() : Fragment() {
         }
     }
 
+    private fun loadMyKeys() {
+        myKeys = keyManager.getMyPublicKeys()
+        val spinnerAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, myKeys.map { it.alias })
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerMyKeys.adapter = spinnerAdapter
+        // Set default selection
+        if (myKeys.isNotEmpty()) {
+            spinnerMyKeys.setSelection(0)
+        }
+    }
+
     private fun loadKeys() {
-        val keyManager = PGPKeyManager(requireContext())
         val keys = keyManager.getAllPublicKeys()
         adapter = KeyAdapter(keys, context)
         listViewKeys.adapter = adapter

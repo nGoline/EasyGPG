@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <Preference
+        android:key="import_key"
+        android:title="Import key from YubiKey"
+        android:summary="Read and register the public key from your YubiKey for decryption" />
+
+    <Preference
+        android:key="generate_key"
+        android:title="Generate new key"
+        android:summary="Generate a new key for decryption" />
+</PreferenceScreen>

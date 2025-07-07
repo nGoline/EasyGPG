@@ -1,4 +1,4 @@
-package com.ngoline.easygpg
+package com.ngoline.easygpg.data
 
 import android.content.Context
 import android.view.LayoutInflater
@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.BaseAdapter
 import android.widget.Button
 import android.widget.TextView
+import com.ngoline.easygpg.R
 
 class KeyAdapter(private val keys: MutableList<KeyItem>, private val context: Context) : BaseAdapter() {
     override fun getCount(): Int = keys.size
@@ -19,7 +20,8 @@ class KeyAdapter(private val keys: MutableList<KeyItem>, private val context: Co
         val view = convertView ?: LayoutInflater.from(parent?.context).inflate(R.layout.key_item, parent, false)
         val keyItem = getItem(position) as KeyItem
         view.findViewById<TextView>(R.id.textAlias).text = keyItem.alias
-        view.findViewById<TextView>(R.id.textFingerprint).text = "${keyItem.fingerprint.take(10)}..."
+        view.findViewById<TextView>(R.id.textFingerprint).text =
+            context.getString(R.string.key_fingerprint, keyItem.fingerprint.take(10))
 
         val deleteButton = view.findViewById<Button>(R.id.buttonDelete)
         deleteButton.setOnClickListener {

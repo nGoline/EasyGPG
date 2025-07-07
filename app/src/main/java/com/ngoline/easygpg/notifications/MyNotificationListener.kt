@@ -1,17 +1,16 @@
-package com.ngoline.easygpg
+package com.ngoline.easygpg.notifications
 
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
-import androidx.core.app.ActivityCompat.requestPermissions
 import androidx.core.app.NotificationCompat
-import com.ngoline.easygpg.ui.decrypt.DecryptFragment
+import com.ngoline.easygpg.MainActivity
+import com.ngoline.easygpg.R
 
 class MyNotificationListener : NotificationListenerService() {
 
@@ -47,7 +46,7 @@ class MyNotificationListener : NotificationListenerService() {
         )
 
         val notification = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(android.R.drawable.ic_lock_lock)
+            .setSmallIcon(R.drawable.ic_menu_camera)
             .setContentTitle("Encrypted Message Detected")
             .setContentText("Tap to decrypt the PGP message.")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -67,7 +66,7 @@ class MyNotificationListener : NotificationListenerService() {
             description = descriptionText
         }
         val notificationManager: NotificationManager =
-            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(channel)
     }
 

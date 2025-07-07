@@ -1,14 +1,27 @@
 package com.ngoline.easygpg
 
 import android.content.Context
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
+import android.util.Log
 import android.widget.Toast
+import com.ngoline.easygpg.data.KeyItem
+import java.io.ByteArrayInputStream
+import java.io.File
+import java.security.SecureRandom
+import java.util.Date
+import javax.crypto.Cipher
+import javax.crypto.CipherInputStream
+import javax.crypto.CipherOutputStream
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import kotlin.collections.filter
 import org.bouncycastle.bcpg.ArmoredInputStream
 import org.bouncycastle.bcpg.ArmoredOutputStream
 import org.bouncycastle.bcpg.HashAlgorithmTags
 import org.bouncycastle.bcpg.PublicKeyAlgorithmTags
 import org.bouncycastle.crypto.generators.Ed25519KeyPairGenerator
 import org.bouncycastle.crypto.params.Ed25519KeyGenerationParameters
-import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.openpgp.PGPEncryptedData
 import org.bouncycastle.openpgp.PGPEncryptedDataList
 import org.bouncycastle.openpgp.PGPKeyRing
@@ -29,22 +42,17 @@ import org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider
 import org.bouncycastle.openpgp.operator.bc.BcPGPKeyPair
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory
 import org.bouncycastle.util.encoders.Hex
-import java.io.ByteArrayInputStream
-import java.io.File
-import java.io.InputStream
-import java.security.SecureRandom
-import java.security.Security
-import java.util.Date
+import java.security.KeyStore
+
+const val BcPGPVersion: Int = 4 // Use version 4 for ECDH keys
+const val LOG_TAG = "PGPKeyManager"
+const val ANDROID_KEYSTORE = "AndroidKeyStore"
+const val KEY_ALIAS = "easygpg_aes_key"
 
 class PGPKeyManager(private val context: Context) {
 
-    init {
-        val bcProvider = BouncyCastleProvider()
-        Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME) // Remove old BC
-        Security.insertProviderAt(bcProvider, 1) // Insert your BC at highest priority
-    }
 
-    fun generateAndSaveKeys() {
+    fun generateAndSaveKeys(alias: String) {
         try {
             // --- Ed25519 for signing (primary key) ---
             val edKeyGen = Ed25519KeyPairGenerator()
@@ -57,13 +65,13 @@ class PGPKeyManager(private val context: Context) {
                 digestCalculator
             ).setSecureRandom(SecureRandom()).build("passphrase".toCharArray())
             val signerBuilder = BcPGPContentSignerBuilder(PublicKeyAlgorithmTags.Ed25519, HashAlgorithmTags.SHA256)
-            val bcEdKeyPair = BcPGPKeyPair(PublicKeyAlgorithmTags.Ed25519, edKeyPair, Date())
+            val bcEdKeyPair = BcPGPKeyPair(BcPGPVersion, PublicKeyAlgorithmTags.Ed25519, edKeyPair, Date())
 
             // --- Curve25519 for encryption (subkey) ---
             val ecdhGen = org.bouncycastle.crypto.generators.X25519KeyPairGenerator()
             ecdhGen.init(org.bouncycastle.crypto.params.X25519KeyGenerationParameters(SecureRandom()))
             val ecdhKeyPair = ecdhGen.generateKeyPair()
-            val bcEcdhKeyPair = BcPGPKeyPair(PublicKeyAlgorithmTags.ECDH, ecdhKeyPair, Date())
+            val bcEcdhKeyPair = BcPGPKeyPair(BcPGPVersion, PublicKeyAlgorithmTags.ECDH, ecdhKeyPair, Date())
 
             // --- Create secret key ring with subkey ---
             val secretKey = PGPSecretKey(
@@ -87,11 +95,16 @@ class PGPKeyManager(private val context: Context) {
             val secretKeyRing = PGPSecretKeyRing(listOf(secretKey, subkey))
             val publicKeyRing = PGPPublicKeyRing(listOf(secretKey.publicKey, subkey.publicKey))
 
-            saveKeyRing(secretKeyRing, "secret_keyring.pgp")
-            saveKeyRing(publicKeyRing, "public_keyring.pgp")
+            saveKeyRing(secretKeyRing, "$alias.secret_keyring.pgp")
+            saveKeyRing(publicKeyRing, "$alias.public_keyring.pgp")
         } catch (e: Exception) {
             Toast.makeText(context, "Failed to generateAndSaveKeys: ${e.message}", Toast.LENGTH_LONG).show()
         }
+    }
+
+    fun hasKeys(): Boolean {
+        val files = context.filesDir.listFiles() ?: return false
+        return files.any { it.isFile && it.name.endsWith(".public_keyring.pgp") }
     }
 
     fun getAllPublicKeys(): MutableList<KeyItem> {
@@ -103,45 +116,41 @@ class PGPKeyManager(private val context: Context) {
                 val publicKey = it.publicKeys.next()
                 if (publicKey != null) {
                     val fingerprint = String(Hex.encode(publicKey.fingerprint))
-                    keys.add(KeyItem(file.name.replace(".imported.pgp", ""), fingerprint, publicKey, it))
+                    keys.add(
+                        KeyItem(
+                            file.name.replace(".imported.pgp", ""),
+                            fingerprint,
+                            publicKey,
+                            it
+                        )
+                    )
                 }
             }
         }
         return keys
     }
 
-    fun loadPublicKeyRing(): PGPPublicKeyRing? {
-        context.openFileInput("public_keyring.pgp").use { fis ->
-            // Use an ArmoredInputStream if the data is stored in armored format.
-            ArmoredInputStream(fis).use { ais ->
-                val pgpObjectFactory = PGPObjectFactory(PGPUtil.getDecoderStream(ais), BcKeyFingerprintCalculator())
-                var obj: Any?
-                while (pgpObjectFactory.nextObject().also { obj = it } != null) {
-                    // Check if the decoded object is a public key ring
-                    if (obj is PGPPublicKeyRing) {
-                        return obj as PGPPublicKeyRing
-                    }
+    fun getMyPublicKeys(): MutableList<KeyItem> {
+        val keys = mutableListOf<KeyItem>()
+        val files = context.filesDir.listFiles() ?: return keys
+        files.filter { it.isFile && it.name.endsWith(".public_keyring.pgp") }.forEach { file ->
+            val publicKeyRing = loadImportedKeyRing(file)
+            publicKeyRing?.let {
+                val publicKey = it.publicKeys.next()
+                if (publicKey != null) {
+                    val fingerprint = String(Hex.encode(publicKey.fingerprint))
+                    keys.add(
+                        KeyItem(
+                            file.name.replace(".public_keyring.pgp", ""),
+                            fingerprint,
+                            publicKey,
+                            it
+                        )
+                    )
                 }
             }
         }
-        return null  // Return null if no public key ring found
-    }
-
-    fun loadSecretKeyRing(): PGPSecretKeyRing? {
-        context.openFileInput("secret_keyring.pgp").use { fis ->
-            // Use ArmoredInputStream if the keyring is stored in an armored format.
-            ArmoredInputStream(fis).use { ais ->
-                val pgpObjFactory = PGPObjectFactory(PGPUtil.getDecoderStream(ais), BcKeyFingerprintCalculator())
-                var obj: Any?
-
-                while (pgpObjFactory.nextObject().also { obj = it } != null) {
-                    if (obj is PGPSecretKeyRing) {
-                        return obj as PGPSecretKeyRing
-                    }
-                }
-            }
-        }
-        return null  // Return null if no secret key ring found
+        return keys
     }
 
     fun importPublicKey(alias: String, keyData: String): PGPPublicKey? {
@@ -176,82 +185,167 @@ class PGPKeyManager(private val context: Context) {
         return null
     }
 
-    private fun saveImportedKeyRing(alias: String, publicKeyRing: PGPPublicKeyRing) {
-        val filename = "$alias.imported.pgp" // Name of the file to save the keys
+    private fun getOrCreateSecretKey(): SecretKey {
+        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
+        keyStore.load(null)
+        val existingKey = keyStore.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry
+        if (existingKey != null) {
+            return existingKey.secretKey
+        }
+        val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
+        val keyGenParameterSpec = KeyGenParameterSpec.Builder(
+            KEY_ALIAS,
+            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+        )
+            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+            .setUserAuthenticationRequired(false)
+            .build()
+        keyGenerator.init(keyGenParameterSpec)
+        return keyGenerator.generateKey()
+    }
 
-        context?.openFileOutput(filename, Context.MODE_PRIVATE).use { fos ->
-            ArmoredOutputStream(fos).use { aos ->
-                publicKeyRing.encode(aos)
+    private fun encryptToFile(plainData: ByteArray, file: File) {
+        val secretKey = getOrCreateSecretKey()
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+        val iv = cipher.iv
+        file.outputStream().use { fos ->
+            fos.write(iv.size)
+            fos.write(iv)
+            CipherOutputStream(fos, cipher).use { cos ->
+                cos.write(plainData)
             }
         }
+    }
 
-        // Notify the user or the app that the key has been saved successfully
+    private fun decryptFromFile(file: File): ByteArray {
+        val secretKey = getOrCreateSecretKey()
+        file.inputStream().use { fis ->
+            fis.mark(20)
+            val ivSize = fis.read()
+            if (ivSize in 12..16) { // likely encrypted (GCM IV is 12-16 bytes)
+                val iv = ByteArray(ivSize)
+                val readIv = fis.read(iv)
+                if (readIv == ivSize) {
+                    try {
+                        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+                        cipher.init(Cipher.DECRYPT_MODE, secretKey, javax.crypto.spec.GCMParameterSpec(128, iv))
+                        CipherInputStream(fis, cipher).use { cis ->
+                            return cis.readBytes()
+                        }
+                    } catch (e: Exception) {
+                        // fall through to plaintext migration
+                        Log.e(LOG_TAG, "Decryption failed: ${e.message}. File is plaintext, migrating.")
+                    }
+                }
+            }
+            // Not encrypted or failed to decrypt: migrate plaintext to encrypted
+            fis.reset()
+            val plainData = fis.readBytes()
+            // Re-encrypt and overwrite file
+            encryptToFile(plainData, file)
+            return plainData
+        }
+    }
+
+    private fun saveImportedKeyRing(alias: String, publicKeyRing: PGPPublicKeyRing) {
+        val filename = "$alias.imported.pgp"
+        val file = File(context.filesDir, filename)
+        val baos = java.io.ByteArrayOutputStream()
+        ArmoredOutputStream(baos).use { aos ->
+            publicKeyRing.encode(aos)
+        }
+        encryptToFile(baos.toByteArray(), file)
         Toast.makeText(context, "Public key saved successfully under alias '$alias'", Toast.LENGTH_SHORT).show()
     }
 
     private fun saveKeyRing(keyRing: PGPKeyRing, filename: String) {
-        context.openFileOutput(filename, Context.MODE_PRIVATE).use { fos ->
-            ArmoredOutputStream(fos).use { aos ->
-                keyRing.encode(aos)
-            }
+        val file = File(context.filesDir, filename)
+        val baos = java.io.ByteArrayOutputStream()
+        ArmoredOutputStream(baos).use { aos ->
+            keyRing.encode(aos)
         }
+        encryptToFile(baos.toByteArray(), file)
     }
 
-    public fun loadImportedKeyRing(file: File): PGPPublicKeyRing? {
-        file.inputStream().use { fis ->
-            return PGPPublicKeyRing(PGPUtil.getDecoderStream(fis), BcKeyFingerprintCalculator())
+    fun loadImportedKeyRing(file: File): PGPPublicKeyRing? {
+        val data = decryptFromFile(file)
+        return PGPPublicKeyRing(PGPUtil.getDecoderStream(data.inputStream()), BcKeyFingerprintCalculator())
+    }
+
+    private fun tryDecryptWithKeyring(secretKeyRing: PGPSecretKeyRing, encryptedMessage: String): String? {
+        try {
+            val decoderStream = PGPUtil.getDecoderStream(encryptedMessage.byteInputStream())
+            val pgpFactory = PGPObjectFactory(decoderStream, BcKeyFingerprintCalculator())
+            var encList: PGPEncryptedDataList? = null
+            var obj = pgpFactory.nextObject()
+            if (obj is PGPEncryptedDataList) {
+                encList = obj
+            } else {
+                obj = pgpFactory.nextObject()
+                if (obj is PGPEncryptedDataList) {
+                    encList = obj
+                }
+            }
+            if (encList == null) return null
+            var privateKey: PGPPrivateKey? = null
+            var encData: org.bouncycastle.openpgp.PGPPublicKeyEncryptedData? = null
+            val it = encList.encryptedDataObjects
+            while (it.hasNext()) {
+                val edata = it.next()
+                if (edata is org.bouncycastle.openpgp.PGPPublicKeyEncryptedData) {
+                    val secretKey = secretKeyRing.getSecretKey(edata.keyIdentifier)
+                    if (secretKey != null) {
+                        privateKey = secretKey.extractPrivateKey(
+                            BcPBESecretKeyDecryptorBuilder(BcPGPDigestCalculatorProvider()).build("passphrase".toCharArray())
+                        )
+                        encData = edata
+                        break
+                    }
+                }
+            }
+            if (privateKey == null || encData == null) return null
+            val clear = encData.getDataStream(BcPublicKeyDataDecryptorFactory(privateKey))
+            val plainFactory = PGPObjectFactory(clear, BcKeyFingerprintCalculator())
+            var message: Any? = plainFactory.nextObject()
+            while (message != null) {
+                if (message is PGPLiteralData) {
+                    val inputStream = message.inputStream
+                    return inputStream.readBytes().toString(Charsets.UTF_8)
+                }
+                message = plainFactory.nextObject()
+            }
+        } catch (e: Exception) {
+            Log.e(LOG_TAG, "Decryption failed: ${e.message}")
+            return null
         }
+        return null
     }
 
     fun decryptMessage(encryptedMessage: String, passphrase: String = "passphrase"): String {
-        val secretKeyRing = loadSecretKeyRing() ?: throw Exception("No secret key ring found")
-        val decoderStream = PGPUtil.getDecoderStream(ByteArrayInputStream(encryptedMessage.toByteArray()))
-        val pgpFactory = PGPObjectFactory(decoderStream, BcKeyFingerprintCalculator())
-        var encList: PGPEncryptedDataList? = null
-
-        // Find the encrypted data list
-        var obj = pgpFactory.nextObject()
-        if (obj is PGPEncryptedDataList) {
-            encList = obj
-        } else {
-            // Sometimes the first object is a marker packet, try next
-            obj = pgpFactory.nextObject()
-            if (obj is PGPEncryptedDataList) {
-                encList = obj
-            }
-        }
-        if (encList == null) throw Exception("No encrypted data found")
-
-        // Find the secret key and private key
-        var privateKey: PGPPrivateKey? = null
-        var encData: org.bouncycastle.openpgp.PGPPublicKeyEncryptedData? = null
-        val it = encList.encryptedDataObjects
-        while (it.hasNext()) {
-            val edata = it.next()
-            if (edata is org.bouncycastle.openpgp.PGPPublicKeyEncryptedData) {
-                val secretKey: PGPSecretKey? = secretKeyRing.getSecretKey(edata.keyID)
-                if (secretKey != null) {
-                    privateKey = secretKey.extractPrivateKey(
-                        BcPBESecretKeyDecryptorBuilder(BcPGPDigestCalculatorProvider()).build(passphrase.toCharArray())
-                    )
-                    encData = edata
-                    break
+        val files = context.filesDir.listFiles()
+        if (files == null) return "No key files found."
+        val secretKeyFiles = files.filter { it.isFile && it.name.endsWith(".secret_keyring.pgp") }
+        if (secretKeyFiles.isEmpty()) return "No private keys available."
+        for (file in secretKeyFiles) {
+            try {
+                val data = decryptFromFile(file)
+                val secretKeyRing = PGPSecretKeyRing(
+                    PGPUtil.getDecoderStream(data.inputStream()),
+                    BcKeyFingerprintCalculator()
+                )
+                try {
+                    // Try to decrypt with this keyring
+                    val decrypted = tryDecryptWithKeyring(secretKeyRing, encryptedMessage)
+                    if (decrypted != null) return decrypted
+                } catch (e: Exception) {
+                    Log.e(LOG_TAG, "Failed to decrypt with keyring ${file.name}: ${e.message}")
                 }
+            } catch (e: Exception) {
+                Log.e(LOG_TAG, "Failed to load keyring ${file.name}: ${e.message}")
             }
         }
-        if (privateKey == null || encData == null) throw Exception("No matching private key found")
-
-        // Decrypt the data
-        val clear = encData.getDataStream(BcPublicKeyDataDecryptorFactory(privateKey))
-        val plainFactory = PGPObjectFactory(clear, BcKeyFingerprintCalculator())
-        var message: Any? = plainFactory.nextObject()
-        while (message != null) {
-            if (message is PGPLiteralData) {
-                val inputStream: InputStream = message.inputStream
-                return inputStream.readBytes().toString(Charsets.UTF_8)
-            }
-            message = plainFactory.nextObject()
-        }
-        throw Exception("No literal data found")
+        return "Failed to decrypt with any available private key."
     }
 }
