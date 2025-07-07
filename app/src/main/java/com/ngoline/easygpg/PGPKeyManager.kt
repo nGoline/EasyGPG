@@ -43,11 +43,22 @@ import org.bouncycastle.openpgp.operator.bc.BcPGPKeyPair
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory
 import org.bouncycastle.util.encoders.Hex
 import java.security.KeyStore
+import androidx.preference.PreferenceManager
+import org.bouncycastle.openpgp.PGPEncryptedDataGenerator
+import org.bouncycastle.openpgp.PGPLiteralDataGenerator
+import org.bouncycastle.openpgp.operator.jcajce.JcePGPDataEncryptorBuilder
+import org.bouncycastle.openpgp.operator.jcajce.JcePublicKeyKeyEncryptionMethodGenerator
+import java.io.ByteArrayOutputStream
 
 const val BcPGPVersion: Int = 4 // Use version 4 for ECDH keys
 const val LOG_TAG = "PGPKeyManager"
 const val ANDROID_KEYSTORE = "AndroidKeyStore"
 const val KEY_ALIAS = "easygpg_aes_key"
+
+object PGPConstants {
+    const val PGP_MARKER = "-----BEGIN PGP MESSAGE-----"
+    const val OBFUSCATED_MARKER = "00023CD1"
+}
 
 class PGPKeyManager(private val context: Context) {
 
@@ -326,6 +337,15 @@ class PGPKeyManager(private val context: Context) {
     fun decryptMessage(encryptedMessage: String, passphrase: String = "passphrase"): String {
         val files = context.filesDir.listFiles()
         if (files == null) return "No key files found."
+
+        // Deobfuscate markers if present
+        var encryptedMessage = encryptedMessage
+        val foundObf = encryptedMessage.trimStart().startsWith(PGPConstants.OBFUSCATED_MARKER)
+        if (foundObf) {
+            Log.d(LOG_TAG, "Detected obfuscated PGP message, deobfuscating markers.")
+            encryptedMessage = deobfuscateMarkers(encryptedMessage)
+        }
+
         val secretKeyFiles = files.filter { it.isFile && it.name.endsWith(".secret_keyring.pgp") }
         if (secretKeyFiles.isEmpty()) return "No private keys available."
         for (file in secretKeyFiles) {
@@ -347,5 +367,87 @@ class PGPKeyManager(private val context: Context) {
             }
         }
         return "Failed to decrypt with any available private key."
+    }
+
+    fun encryptMessage(message: String, publicKey: PGPPublicKey): String {
+        try {
+            val encryptedData = ByteArrayOutputStream()
+            val armorStream = ArmoredOutputStream(encryptedData)
+
+            val encGen = PGPEncryptedDataGenerator(
+                JcePGPDataEncryptorBuilder(PGPEncryptedData.AES_256)
+                    .setWithIntegrityPacket(true)
+                    .setSecureRandom(SecureRandom())
+                    .setProvider("BC")
+            )
+
+            val keyEncryptionMethodGenerator = JcePublicKeyKeyEncryptionMethodGenerator(publicKey).setProvider("BC")
+            encGen.addMethod(keyEncryptionMethodGenerator)
+
+            val encOut = encGen.open(armorStream, ByteArray(4096))
+            val lData = PGPLiteralDataGenerator()
+            val pOut = lData.open(encOut, PGPLiteralData.BINARY, "filename", message.toByteArray().size.toLong(), Date())
+            pOut.write(message.toByteArray())
+            pOut.close()
+
+            encOut.close()
+            armorStream.close()
+
+            var encryptedMessage = String(encryptedData.toByteArray())
+            if (isObfuscateMarkersEnabled()) {
+                Log.d(LOG_TAG, "Obfuscating PGP markers in encrypted message.")
+                encryptedMessage = obfuscateMarkers(encryptedMessage)
+            }
+            return encryptedMessage
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return "Encryption failed"
+        }
+    }
+
+    private fun isObfuscateMarkersEnabled(): Boolean {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        return prefs.getBoolean(context.getString(R.string.obfuscate_pgp_markers), false)
+    }
+
+    private fun obfuscateMarkers(input: String): String {
+        // Replace all PGP marker lines and version/comment lines with 00023CD1
+        return input.lines().joinToString("") { line ->
+            if (line.startsWith("-----BEGIN ") ||
+                line.startsWith("-----END ") ||
+                line.isBlank()) PGPConstants.OBFUSCATED_MARKER
+            else if (line.startsWith("Version:") ||
+                line.startsWith("Comment:")) ""
+            else line
+        }
+    }
+
+    private fun deobfuscateMarkers(input: String): String {
+        // Remove all obfuscated markers, add BEGIN/END markers, and break lines to 64 chars
+        val clean = input.replace(PGPConstants.OBFUSCATED_MARKER, "")
+            .replace("\n", "")
+            .replace("\r", "")
+            .trim()
+        // Separate checksum if present (starts with '=')
+        val checksumIndex = clean.lastIndexOf('=')
+        val (base64Data, checksum) = if (checksumIndex != -1 && clean.length - checksumIndex <= 5) {
+            clean.substring(0, checksumIndex) to clean.substring(checksumIndex)
+        } else {
+            clean to null
+        }
+        val sb = StringBuilder()
+        sb.append(PGPConstants.PGP_MARKER).append("\n\n")
+        var i = 0
+        while (i < base64Data.length) {
+            val end = (i + 64).coerceAtMost(base64Data.length)
+            sb.append(base64Data.substring(i, end)).append("\n")
+            i = end
+        }
+        if (checksum != null) {
+            sb.append(checksum).append("\n")
+        }
+        val endMarker = PGPConstants.PGP_MARKER.replace("BEGIN", "END")
+        sb.append(endMarker).append("\n")
+        return sb.toString()
     }
 }

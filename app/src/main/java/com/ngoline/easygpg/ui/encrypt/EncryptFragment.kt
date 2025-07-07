@@ -76,7 +76,7 @@ class EncryptFragment : Fragment() {
                 // Run encryption in a background thread
                 lifecycleScope.launch {
                     val encryptedMessage = withContext(Dispatchers.Default) {
-                        encryptMessage(message, selectedKey)
+                        keyManager.encryptMessage(message, selectedKey)
                     }
                     shareEncryptedMessage(encryptedMessage)
                     editTextMessage.setText("")
@@ -114,39 +114,6 @@ class EncryptFragment : Fragment() {
         // Create an ArrayAdapter for the spinner. Specify the type explicitly for ArrayAdapter.
         val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item, aliasesAndKeys.map { it.first })
         spinnerPublicKeys.adapter = adapter
-    }
-
-
-
-    private fun encryptMessage(message: String, publicKey: PGPPublicKey): String {
-        try {
-            val encryptedData = ByteArrayOutputStream()
-            val armorStream = ArmoredOutputStream(encryptedData)
-
-            val encGen = PGPEncryptedDataGenerator(
-                JcePGPDataEncryptorBuilder(PGPEncryptedData.AES_256)
-                    .setWithIntegrityPacket(true)
-                    .setSecureRandom(SecureRandom())
-                    .setProvider("BC")
-            )
-
-            val keyEncryptionMethodGenerator = JcePublicKeyKeyEncryptionMethodGenerator(publicKey).setProvider("BC")
-            encGen.addMethod(keyEncryptionMethodGenerator)
-
-            val encOut = encGen.open(armorStream, ByteArray(4096))
-            val lData = PGPLiteralDataGenerator()
-            val pOut = lData.open(encOut, PGPLiteralData.BINARY, "filename", message.toByteArray().size.toLong(), Date())
-            pOut.write(message.toByteArray())
-            pOut.close()
-
-            encOut.close()
-            armorStream.close()
-
-            return String(encryptedData.toByteArray())
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return "Encryption failed"
-        }
     }
 
     private fun shareEncryptedMessage(encryptedMessage: String) {

@@ -9,4 +9,10 @@
         android:key="generate_key"
         android:title="Generate new key"
         android:summary="Generate a new key for decryption" />
+
+    <SwitchPreferenceCompat
+        android:key="@string/obfuscate_pgp_markers"
+        android:title="Obfuscate PGP Markers"
+        android:summary="Replace PGP BEGIN/END markers with a hex pattern to make messages harder to detect"
+        android:defaultValue="false" />
 </PreferenceScreen>
