@@ -13,3 +13,17 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# IDE — machine-specific, not for version control
+/.idea/
+
+# Signing material — never commit these
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+
+# Build outputs / release artifacts
+*.apk
+*.aab
+/app/release/
