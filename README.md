@@ -15,7 +15,7 @@ command line.
 - 🗝️ Generate, import, and manage key rings on device
 - 🛡️ Hardware-backed key storage via the Android Keystore
 - 🔑 YubiKey support over USB and NFC (OpenPGP applet)
-- 🌐 Localizable string resources (English)
+- 🌐 Localized in English and Portuguese (Brazil)
 
 ## Tech stack
 
