@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Easy GPG</string>
+    <string name="navigation_drawer_open">Abrir menu</string>
+    <string name="navigation_drawer_close">Fechar menu</string>
+    <string name="action_settings">Configurações</string>
+    <string name="menu_encrypt">Criptografar</string>
+    <string name="menu_decrypt">Descriptografar</string>
+    <string name="menu_keys">Chaves</string>
+    <string name="decrypted_message_will_appear_here">A mensagem descriptografada vai aparecer aqui</string>
+    <string name="encrypt_amp_share">Criptografar e Compartilhar</string>
+    <string name="enter_message">Digite a mensagem</string>
+    <string name="decrypting">Descriptografando</string>
+    <string name="enter_cipher">Mensagem criptografada</string>
+    <string name="decrypt">Descriptografar</string>
+    <string name="waiting_for_encrypted_message">Aguardando mensagem criptografada</string>
+    <string name="decryption_failed">A descriptografia falhou: %1$s</string>
+    <string name="welcome_to_easygpg">Bem-vindo ao EasyGPG</string>
+    <string name="home_no_keys_found">Você ainda não tem nenhuma chave.\nAcesse as configurações para criar/importar suas chaves.\n</string>
+    <string name="public_key_appears_here">A chave pública aparece aqui</string>
+    <string name="copy_public_key">Copiar chave pública</string>
+    <string name="import_public_key">Importar chave pública</string>
+    <string name="select_a_key_to_view_its_fingerprint">Selecione uma chave para ver o identificador</string>
+    <string name="enter_message_to_decrypt">Digite a mensagem para descriptografar</string>
+    <string name="you_re_all_set_your_keys_are_ready_to_use">Tudo pronto! Suas chaves já podem ser utilizadas.</string>
+</resources>

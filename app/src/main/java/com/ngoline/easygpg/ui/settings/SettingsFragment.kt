@@ -22,6 +22,24 @@ import com.yubico.yubikit.openpgp.OpenPgpSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.bouncycastle.asn1.ASN1ObjectIdentifier
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
+import org.bouncycastle.asn1.x9.X9ObjectIdentifiers
+import org.bouncycastle.bcpg.HashAlgorithmTags
+import org.bouncycastle.bcpg.PublicKeyAlgorithmTags
+import org.bouncycastle.bcpg.SymmetricKeyAlgorithmTags
+import org.bouncycastle.crypto.params.AsymmetricKeyParameter
+import org.bouncycastle.crypto.params.X25519PublicKeyParameters
+import org.bouncycastle.crypto.util.SubjectPublicKeyInfoFactory
+import org.bouncycastle.openpgp.PGPAlgorithmParameters
+import org.bouncycastle.openpgp.PGPKdfParameters
+import org.bouncycastle.openpgp.PGPObjectFactory
+import org.bouncycastle.openpgp.PGPPublicKey
+import org.bouncycastle.openpgp.PGPPublicKeyRing
+import org.bouncycastle.openpgp.PGPUtil
+import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator
+import org.bouncycastle.openpgp.operator.bc.BcPGPKeyConverter
+import java.util.Date
 import kotlin.properties.Delegates
 
 class SettingsFragment : PreferenceFragmentCompat() {
@@ -95,7 +113,8 @@ class SettingsFragment : PreferenceFragmentCompat() {
     }
 
     private fun importPublicKeyFromYubikey() {
-        Toast.makeText(requireContext(), "Waiting for Yubikey... (insert via USB or tap via NFC)", Toast.LENGTH_LONG).show()
+        Toast.makeText(requireContext(),
+            getString(R.string.waiting_for_yubikey_insert_via_usb_or_tap_via_nfc), Toast.LENGTH_LONG).show()
         viewModel.handleYubiKey.observe(this) {
             if (it) {
                 Log.i(LOG_TAG, "Enable listening")
@@ -126,47 +145,31 @@ class SettingsFragment : PreferenceFragmentCompat() {
     }
 
     private fun nfcAcquired(device: NfcYubiKeyDevice){
-        /*lifecycleScope.launch {
+        lifecycleScope.launch {
             try {
                 val keyRefs = listOf(KeyRef.SIG, KeyRef.DEC)
                 val connection = withContext(Dispatchers.IO) {
                     device.openConnection(SmartCardConnection::class.java)
                 }
                 val openPgpSession = OpenPgpSession(connection)
-                val pubKeys = mutableListOf<org.bouncycastle.openpgp.PGPPublicKey>()
+                var pubKeyRing : PGPPublicKeyRing? = null
                 for (keyRef in keyRefs) {
                     try {
                         val pubKeyData = withContext(Dispatchers.IO) {
                             openPgpSession.getPublicKey(keyRef)
                         }
                         if (pubKeyData != null) {
-                            // Try to parse as a keyring, otherwise wrap as a single-key keyring
                             try {
-                                val keyRing = org.bouncycastle.openpgp.PGPPublicKeyRing(
-                                    pubKeyData.encoded.inputStream(),
-                                    org.bouncycastle.openpgp.operator.jcajce.JcaKeyFingerprintCalculator()
-                                )
-                                val keyIter = keyRing.publicKeys
-                                while (keyIter.hasNext()) {
-                                    val pubKey = keyIter.next() as org.bouncycastle.openpgp.PGPPublicKey
-                                    pubKeys.add(pubKey)
+                                val x25519Params = X25519PublicKeyParameters(pubKeyData.encoded, 0)
+                                val bcConverter = BcPGPKeyConverter()
+                                val pgpPubKey = bcConverter.getPGPPublicKey(4, PublicKeyAlgorithmTags.ECDH, null, x25519Params, Date())
+                                if (pubKeyRing == null) {
+                                    pubKeyRing = PGPPublicKeyRing(listOf(pgpPubKey))
+                                } else {
+                                    PGPPublicKeyRing.insertPublicKey(pubKeyRing, pgpPubKey)
                                 }
-                            } catch (_: Exception) {
-                                // If not a keyring, treat as a single key and wrap in a keyring
-                                try {
-                                    val singleKey = org.bouncycastle.openpgp.PGPPublicKey(
-                                        pubKeyData.encoded.inputStream(),
-                                        org.bouncycastle.openpgp.operator.jcajce.JcaKeyFingerprintCalculator()
-                                    )
-                                    val keyRing = org.bouncycastle.openpgp.PGPPublicKeyRing(listOf(singleKey))
-                                    val keyIter = keyRing.publicKeys
-                                    while (keyIter.hasNext()) {
-                                        val pubKey = keyIter.next() as org.bouncycastle.openpgp.PGPPublicKey
-                                        pubKeys.add(pubKey)
-                                    }
-                                } catch (e: Exception) {
-                                    Log.e(LOG_TAG, "Error parsing public key for $keyRef: ${e.localizedMessage}")
-                                }
+                            } catch (e: Exception) {
+                                Log.e(LOG_TAG, "Error parsing public key for $keyRef: ${e.localizedMessage}")
                             }
                         }
                     } catch (e: Exception) {
@@ -174,19 +177,34 @@ class SettingsFragment : PreferenceFragmentCompat() {
                         // Ignore missing slots
                     }
                 }
-                if (pubKeys.isNotEmpty()) {
-                    val mergedRing = org.bouncycastle.openpgp.PGPPublicKeyRing(pubKeys)
-                    val baos = java.io.ByteArrayOutputStream()
-                    val aos = org.bouncycastle.bcpg.ArmoredOutputStream(baos)
-                    mergedRing.encode(aos)
-                    aos.close()
-                    val armored = baos.toByteArray()
-                    val fingerprint = PublicKeyStore.fingerprintOf(armored)
-                    promptForAliasAndStore(armored, fingerprint)
+                if (pubKeyRing != null) {
+                    promptForAliasAndStore(pubKeyRing)
+                } else {
+                    Toast.makeText(requireContext(), "No public keys found on the YubiKey", Toast.LENGTH_LONG).show()
                 }
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), "Failed to import key: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), requireContext().getString(R.string.failed_to_import_public_key, e.localizedMessage), Toast.LENGTH_LONG).show()
             }
-        }*/
+        }
+    }
+
+    private fun promptForAliasAndStore(pubKeyRing: PGPPublicKeyRing) {
+        val builder = AlertDialog.Builder(requireContext())
+        builder.setTitle(getString(R.string.enter_an_alias_for_this_key))
+        val input = EditText(requireContext())
+        builder.setView(input)
+        builder.setPositiveButton("OK") { _, _ ->
+            val alias = input.text.toString()
+            if (alias.isNotBlank()) {
+                keyManager.saveYubikeyKeyRing(alias, pubKeyRing)
+                Toast.makeText(requireContext(),
+                    getString(R.string.public_keyring_imported_and_trusted), Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(requireContext(),
+                    getString(R.string.alias_cannot_be_empty), Toast.LENGTH_SHORT).show()
+            }
+        }
+        builder.setNegativeButton(getString(R.string.cancel), null)
+        builder.show()
     }
 }

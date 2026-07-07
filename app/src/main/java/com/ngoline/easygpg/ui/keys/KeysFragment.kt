@@ -78,14 +78,14 @@ class KeysFragment() : Fragment() {
         importButton = root.findViewById(R.id.importButton)
         spinnerMyKeys = root.findViewById(R.id.spinnerMyKeys)
 
-        publicKeyDisplay.text = "Select a key to view its fingerprint"
+        publicKeyDisplay.text = getText(R.string.select_a_key_to_view_its_fingerprint)
         copyButton.isEnabled = false
 
         loadMyKeys()
         loadKeys()
 
         // Spinner selection logic
-        spinnerMyKeys.setOnItemSelectedListener(object : android.widget.AdapterView.OnItemSelectedListener {
+        spinnerMyKeys.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: android.widget.AdapterView<*>, view: View?, position: Int, id: Long) {
                 selectedMyKey = myKeys.getOrNull(position)
                 if (selectedMyKey != null) {
@@ -96,12 +96,13 @@ class KeysFragment() : Fragment() {
                     copyButton.isEnabled = false
                 }
             }
+
             override fun onNothingSelected(parent: android.widget.AdapterView<*>) {
                 selectedMyKey = null
                 publicKeyDisplay.text = getString(R.string.select_a_key_to_view_its_fingerprint)
                 copyButton.isEnabled = false
             }
-        })
+        }
 
         copyButton.setOnClickListener {
             selectedMyKey?.let {
@@ -136,9 +137,10 @@ class KeysFragment() : Fragment() {
     private fun copyToClipboard(publicKeyRing: PGPPublicKeyRing) {
         val formattedKey = formatPublicKeyForExport(publicKeyRing)
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val clip = ClipData.newPlainText("Public Key", formattedKey)
+        val clip = ClipData.newPlainText(getString(R.string.public_key), formattedKey)
         clipboard.setPrimaryClip(clip)
-        Toast.makeText(context, "Public key copied to clipboard", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context,
+            getString(R.string.public_key_copied_to_clipboard), Toast.LENGTH_SHORT).show()
     }
 
     private fun showImportKeyDialog(context: Context) {
@@ -163,13 +165,15 @@ class KeysFragment() : Fragment() {
                         val newKey = KeyItem(alias, fingerprint, publicKey, publicKeyRing)
                         adapter.addKey(newKey)
                     } else {
-                        Toast.makeText(context, "Failed to import key", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context,
+                            getString(R.string.failed_to_import_key), Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    Toast.makeText(context, "Alias and public key must not be empty", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context,
+                        getString(R.string.alias_and_public_key_must_not_be_empty), Toast.LENGTH_SHORT).show()
                 }
             }
-            setNegativeButton("Cancel", null)
+            setNegativeButton(getString(R.string.cancel), null)
             create().show()
         }
     }

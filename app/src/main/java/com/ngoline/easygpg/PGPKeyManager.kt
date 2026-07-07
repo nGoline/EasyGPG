@@ -48,7 +48,9 @@ import org.bouncycastle.openpgp.PGPEncryptedDataGenerator
 import org.bouncycastle.openpgp.PGPLiteralDataGenerator
 import org.bouncycastle.openpgp.operator.jcajce.JcePGPDataEncryptorBuilder
 import org.bouncycastle.openpgp.operator.jcajce.JcePublicKeyKeyEncryptionMethodGenerator
+import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
+import java.io.FileInputStream
 
 const val BcPGPVersion: Int = 4 // Use version 4 for ECDH keys
 const val LOG_TAG = "PGPKeyManager"
@@ -109,7 +111,8 @@ class PGPKeyManager(private val context: Context) {
             saveKeyRing(secretKeyRing, "$alias.secret_keyring.pgp")
             saveKeyRing(publicKeyRing, "$alias.public_keyring.pgp")
         } catch (e: Exception) {
-            Toast.makeText(context, "Failed to generateAndSaveKeys: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(context,
+                context.getString(R.string.failed_to_generateandsavekeys, e.localizedMessage), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -175,22 +178,25 @@ class PGPKeyManager(private val context: Context) {
                     when (obj) {
                         is PGPPublicKeyRing -> {
                             saveImportedKeyRing(alias, obj)
-                            Toast.makeText(context, "Public key imported successfully", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context,
+                                context.getString(R.string.public_key_imported_successfully), Toast.LENGTH_SHORT).show()
                             return obj.publicKey
                         }
                         is PGPPublicKey -> {
                             // Wrap single key in a keyring
                             val keyRing = PGPPublicKeyRing(listOf(obj))
                             saveImportedKeyRing(alias, keyRing)
-                            Toast.makeText(context, "Public key imported successfully", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.public_key_imported_successfully), Toast.LENGTH_SHORT).show()
                             return obj
                         }
                     }
                 }
-                Toast.makeText(context, "Invalid public key format", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context,
+                    context.getString(R.string.invalid_public_key_format), Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
-            Toast.makeText(context, "Failed to import public key: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(context,
+                context.getString(R.string.failed_to_import_public_key, e.localizedMessage), Toast.LENGTH_LONG).show()
         }
 
         return null
@@ -232,8 +238,9 @@ class PGPKeyManager(private val context: Context) {
 
     private fun decryptFromFile(file: File): ByteArray {
         val secretKey = getOrCreateSecretKey()
-        file.inputStream().use { fis ->
-            fis.mark(20)
+        FileInputStream(file).use { baseFis ->
+            val fis = BufferedInputStream(baseFis)
+            fis.mark(file.length().toInt() + 1) // mark at the start, with enough limit
             val ivSize = fis.read()
             if (ivSize in 12..16) { // likely encrypted (GCM IV is 12-16 bytes)
                 val iv = ByteArray(ivSize)
@@ -263,17 +270,30 @@ class PGPKeyManager(private val context: Context) {
     private fun saveImportedKeyRing(alias: String, publicKeyRing: PGPPublicKeyRing) {
         val filename = "$alias.imported.pgp"
         val file = File(context.filesDir, filename)
-        val baos = java.io.ByteArrayOutputStream()
+        val baos = ByteArrayOutputStream()
         ArmoredOutputStream(baos).use { aos ->
             publicKeyRing.encode(aos)
         }
         encryptToFile(baos.toByteArray(), file)
-        Toast.makeText(context, "Public key saved successfully under alias '$alias'", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context,
+            context.getString(R.string.public_key_saved_successfully_under_alias, alias), Toast.LENGTH_SHORT).show()
+    }
+
+    fun saveYubikeyKeyRing(alias: String, publicKeyRing: PGPPublicKeyRing) {
+        val filename = "$alias.public_smartcard_keyring.pgp"
+        val file = File(context.filesDir, filename)
+        val baos = ByteArrayOutputStream()
+        ArmoredOutputStream(baos).use { aos ->
+            publicKeyRing.encode(aos)
+        }
+        encryptToFile(baos.toByteArray(), file)
+        Toast.makeText(context,
+            context.getString(R.string.public_key_saved_successfully_under_alias, alias), Toast.LENGTH_SHORT).show()
     }
 
     private fun saveKeyRing(keyRing: PGPKeyRing, filename: String) {
         val file = File(context.filesDir, filename)
-        val baos = java.io.ByteArrayOutputStream()
+        val baos = ByteArrayOutputStream()
         ArmoredOutputStream(baos).use { aos ->
             keyRing.encode(aos)
         }
@@ -336,7 +356,7 @@ class PGPKeyManager(private val context: Context) {
 
     fun decryptMessage(encryptedMessage: String, passphrase: String = "passphrase"): String {
         val files = context.filesDir.listFiles()
-        if (files == null) return "No key files found."
+        if (files == null) return context.getString(R.string.no_key_files_found)
 
         // Deobfuscate markers if present
         var encryptedMessage = encryptedMessage
@@ -347,7 +367,7 @@ class PGPKeyManager(private val context: Context) {
         }
 
         val secretKeyFiles = files.filter { it.isFile && it.name.endsWith(".secret_keyring.pgp") }
-        if (secretKeyFiles.isEmpty()) return "No private keys available."
+        if (secretKeyFiles.isEmpty()) return context.getString(R.string.no_private_keys_available)
         for (file in secretKeyFiles) {
             try {
                 val data = decryptFromFile(file)
@@ -366,7 +386,7 @@ class PGPKeyManager(private val context: Context) {
                 Log.e(LOG_TAG, "Failed to load keyring ${file.name}: ${e.message}")
             }
         }
-        return "Failed to decrypt with any available private key."
+        return context.getString(R.string.failed_to_decrypt_with_any_available_private_key)
     }
 
     fun encryptMessage(message: String, publicKey: PGPPublicKey): String {
@@ -401,7 +421,7 @@ class PGPKeyManager(private val context: Context) {
             return encryptedMessage
         } catch (e: Exception) {
             e.printStackTrace()
-            return "Encryption failed"
+            return context.getString(R.string.encryption_failed)
         }
     }
 

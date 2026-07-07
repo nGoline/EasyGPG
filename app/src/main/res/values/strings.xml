@@ -29,4 +29,22 @@
     <string name="enter_message_to_decrypt">Enter message to decrypt</string>
     <string name="you_re_all_set_your_keys_are_ready_to_use">You\'re all set! Your keys are ready to use.</string>
     <string name="obfuscate_pgp_markers">obfuscate_pgp_markers</string>
+    <string name="failed_to_import_key">Failed to import key</string>
+    <string name="alias_and_public_key_must_not_be_empty">Alias and public key must not be empty</string>
+    <string name="cancel">Cancel</string>
+    <string name="public_key_copied_to_clipboard">Public key copied to clipboard</string>
+    <string name="public_key">Public Key</string>
+    <string name="public_key_imported_successfully">Public key imported successfully</string>
+    <string name="invalid_public_key_format">Invalid public key format</string>
+    <string name="failed_to_import_public_key">Failed to import public key: %1$s</string>
+    <string name="public_key_saved_successfully_under_alias">Public key saved successfully under alias \'%1$s\'</string>
+    <string name="failed_to_generateandsavekeys">Failed to generateAndSaveKeys: %1$s</string>
+    <string name="encryption_failed">Encryption failed</string>
+    <string name="failed_to_decrypt_with_any_available_private_key">Failed to decrypt with any available private key.</string>
+    <string name="no_private_keys_available">No private keys available.</string>
+    <string name="no_key_files_found">No key files found.</string>
+    <string name="enter_an_alias_for_this_key">Enter an alias for this key</string>
+    <string name="public_keyring_imported_and_trusted">Public keyring imported and trusted!</string>
+    <string name="alias_cannot_be_empty">Alias cannot be empty</string>
+    <string name="waiting_for_yubikey_insert_via_usb_or_tap_via_nfc">Waiting for Yubikey... (insert via USB or tap via NFC)</string>
 </resources>
