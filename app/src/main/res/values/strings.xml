@@ -32,6 +32,7 @@
     <string name="delete_key">Delete</string>
     <string name="delete_key_confirm_title">Delete key</string>
     <string name="delete_key_confirm_message">Delete \'%1$s\'? This permanently removes its private key. Messages encrypted to this key can no longer be decrypted.</string>
+    <string name="delete_imported_key_confirm_message">Delete \'%1$s\'? This cannot be undone.</string>
     <string name="key_deleted">Key deleted</string>
     <string name="no_key_selected">No key selected</string>
 </resources>
