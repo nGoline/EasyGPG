@@ -15,8 +15,10 @@ import android.widget.ArrayAdapter
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
 import com.ngoline.easygpg.data.KeyAdapter
 import com.ngoline.easygpg.data.KeyItem
 import com.ngoline.easygpg.PGPKeyManager
@@ -111,6 +113,14 @@ class KeysFragment() : Fragment() {
 
         importButton.setOnClickListener {
             showImportKeyDialog(context)
+        }
+
+        listViewKeys.setOnItemClickListener { _, _, position, _ ->
+            val keyItem = adapter.getItem(position) as KeyItem
+            findNavController().navigate(
+                R.id.nav_encrypt,
+                bundleOf("selected_key_alias" to keyItem.alias)
+            )
         }
 
         return root

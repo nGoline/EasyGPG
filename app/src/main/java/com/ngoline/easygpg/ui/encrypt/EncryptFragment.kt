@@ -66,7 +66,7 @@ class EncryptFragment : Fragment() {
         spinnerPublicKeys = root.findViewById(R.id.spinnerPublicKeys)
         buttonEncryptShare = root.findViewById(R.id.buttonEncryptShare)
 
-        loadPublicKeys()
+        loadPublicKeys(arguments?.getString("selected_key_alias"))
 
         buttonEncryptShare.setOnClickListener {
             val message = editTextMessage.text.toString()
@@ -93,11 +93,11 @@ class EncryptFragment : Fragment() {
         _binding = null
     }
 
-    private fun loadPublicKeys() {
+    private fun loadPublicKeys(selectedAlias: String? = null) {
         val keyItems: MutableList<KeyItem> = keyManager.getAllPublicKeys()
 
         // For each keyring, find all encryption-capable keys
-        val aliasesAndKeys: List<Pair<String, PGPPublicKey>> = keyItems.flatMap { keyItem ->
+        val aliasesAndKeys: List<Triple<String, String, PGPPublicKey>> = keyItems.flatMap { keyItem ->
             val encryptionKeys = keyItem.publicKeyRing.publicKeys?.asSequence()
                 ?.filter { it.isEncryptionKey }
                 ?.toList()
@@ -105,15 +105,22 @@ class EncryptFragment : Fragment() {
 
             encryptionKeys.map { pubKey ->
                 val shortFingerprint = Hex.toHexString(pubKey.fingerprint).substring(0, 16)
-                "${keyItem.alias} ($shortFingerprint)" to pubKey
+                Triple(keyItem.alias, "${keyItem.alias} ($shortFingerprint)", pubKey)
             }
         }
 
-        publicKeyList = aliasesAndKeys.map { it.second }
+        publicKeyList = aliasesAndKeys.map { it.third }
 
         // Create an ArrayAdapter for the spinner. Specify the type explicitly for ArrayAdapter.
-        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item, aliasesAndKeys.map { it.first })
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item, aliasesAndKeys.map { it.second })
         spinnerPublicKeys.adapter = adapter
+
+        if (selectedAlias != null) {
+            val index = aliasesAndKeys.indexOfFirst { it.first == selectedAlias }
+            if (index >= 0) {
+                spinnerPublicKeys.setSelection(index)
+            }
+        }
     }
 
     private fun shareEncryptedMessage(encryptedMessage: String) {
