@@ -171,7 +171,7 @@ class KeysFragment() : Fragment() {
                         java.io.File(context.filesDir, "$alias.imported.pgp")
                     )
                     if (publicKey != null && publicKeyRing != null) {
-                        val fingerprint = "${String(Hex.encode(publicKey.fingerprint)).take(16)}..."
+                        val fingerprint = String(Hex.encode(publicKey.fingerprint))
                         val newKey = KeyItem(alias, fingerprint, publicKey, publicKeyRing)
                         adapter.addKey(newKey)
                     } else {
