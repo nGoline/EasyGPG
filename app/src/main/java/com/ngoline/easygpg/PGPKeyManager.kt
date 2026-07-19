@@ -141,6 +141,12 @@ class PGPKeyManager(private val context: Context) {
         return keys
     }
 
+    fun deleteMyKey(alias: String): Boolean {
+        val deletedSecret = context.deleteFile("$alias.secret_keyring.pgp")
+        val deletedPublic = context.deleteFile("$alias.public_keyring.pgp")
+        return deletedSecret || deletedPublic
+    }
+
     fun getMyPublicKeys(): MutableList<KeyItem> {
         val keys = mutableListOf<KeyItem>()
         val files = context.filesDir.listFiles() ?: return keys
