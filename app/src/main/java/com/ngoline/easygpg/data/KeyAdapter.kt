@@ -7,6 +7,8 @@ import android.view.ViewGroup
 import android.widget.BaseAdapter
 import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import com.ngoline.easygpg.R
 
 class KeyAdapter(private val keys: MutableList<KeyItem>, private val context: Context) : BaseAdapter() {
@@ -25,7 +27,7 @@ class KeyAdapter(private val keys: MutableList<KeyItem>, private val context: Co
 
         val deleteButton = view.findViewById<Button>(R.id.buttonDelete)
         deleteButton.setOnClickListener {
-            removeKey(position)
+            showDeleteConfirmDialog(position)
         }
 
         return view
@@ -34,6 +36,20 @@ class KeyAdapter(private val keys: MutableList<KeyItem>, private val context: Co
     fun addKey(keyItem: KeyItem) {
         keys.add(keyItem)
         notifyDataSetChanged()
+    }
+
+    private fun showDeleteConfirmDialog(position: Int) {
+        val keyItem = keys[position]
+        AlertDialog.Builder(context).apply {
+            setTitle(R.string.delete_key_confirm_title)
+            setMessage(context.getString(R.string.delete_key_confirm_message, keyItem.alias))
+            setPositiveButton(R.string.delete_key) { _, _ ->
+                removeKey(position)
+                Toast.makeText(context, R.string.key_deleted, Toast.LENGTH_SHORT).show()
+            }
+            setNegativeButton(android.R.string.cancel, null)
+            create().show()
+        }
     }
 
     private fun removeKey(position: Int) {

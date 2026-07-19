@@ -29,4 +29,8 @@
     <string name="enter_message_to_decrypt">Enter message to decrypt</string>
     <string name="you_re_all_set_your_keys_are_ready_to_use">You\'re all set! Your keys are ready to use.</string>
     <string name="obfuscate_pgp_markers">obfuscate_pgp_markers</string>
+    <string name="delete_key">Delete</string>
+    <string name="delete_key_confirm_title">Delete key</string>
+    <string name="delete_key_confirm_message">Delete \'%1$s\'? This cannot be undone.</string>
+    <string name="key_deleted">Key deleted</string>
 </resources>
