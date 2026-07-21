@@ -23,7 +23,7 @@ class KeyAdapter(private val keys: MutableList<KeyItem>, private val context: Co
         val keyItem = getItem(position) as KeyItem
         view.findViewById<TextView>(R.id.textAlias).text = keyItem.alias
         view.findViewById<TextView>(R.id.textFingerprint).text =
-            context.getString(R.string.key_fingerprint, keyItem.fingerprint.take(10))
+            context.getString(R.string.key_fingerprint, keyItem.fingerprint.takeLast(8))
 
         val deleteButton = view.findViewById<Button>(R.id.buttonDelete)
         deleteButton.setOnClickListener {
@@ -42,7 +42,7 @@ class KeyAdapter(private val keys: MutableList<KeyItem>, private val context: Co
         val keyItem = keys[position]
         AlertDialog.Builder(context).apply {
             setTitle(R.string.delete_key_confirm_title)
-            setMessage(context.getString(R.string.delete_key_confirm_message, keyItem.alias))
+            setMessage(context.getString(R.string.delete_imported_key_confirm_message, keyItem.alias))
             setPositiveButton(R.string.delete_key) { _, _ ->
                 removeKey(position)
                 Toast.makeText(context, R.string.key_deleted, Toast.LENGTH_SHORT).show()
