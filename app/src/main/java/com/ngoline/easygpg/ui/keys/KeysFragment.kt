@@ -45,6 +45,7 @@ class KeysFragment() : Fragment() {
     private lateinit var adapter: KeyAdapter
     private lateinit var context: Context
     private lateinit var spinnerMyKeys: Spinner
+    private lateinit var deleteMyKeyButton: Button
 
     private var _binding: FragmentKeysBinding? = null
 
@@ -79,9 +80,9 @@ class KeysFragment() : Fragment() {
         copyButton = root.findViewById(R.id.copyButton)
         importButton = root.findViewById(R.id.importButton)
         spinnerMyKeys = root.findViewById(R.id.spinnerMyKeys)
+        deleteMyKeyButton = root.findViewById(R.id.deleteMyKeyButton)
 
-        publicKeyDisplay.text = "Select a key to view its fingerprint"
-        copyButton.isEnabled = false
+        updateMyKeyDisplay(null)
 
         loadMyKeys()
         loadKeys()
@@ -89,19 +90,10 @@ class KeysFragment() : Fragment() {
         // Spinner selection logic
         spinnerMyKeys.setOnItemSelectedListener(object : android.widget.AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: android.widget.AdapterView<*>, view: View?, position: Int, id: Long) {
-                selectedMyKey = myKeys.getOrNull(position)
-                if (selectedMyKey != null) {
-                    publicKeyDisplay.text = getFingerprint(selectedMyKey!!.publicKey)
-                    copyButton.isEnabled = true
-                } else {
-                    publicKeyDisplay.text = getString(R.string.select_a_key_to_view_its_fingerprint)
-                    copyButton.isEnabled = false
-                }
+                updateMyKeyDisplay(myKeys.getOrNull(position))
             }
             override fun onNothingSelected(parent: android.widget.AdapterView<*>) {
-                selectedMyKey = null
-                publicKeyDisplay.text = getString(R.string.select_a_key_to_view_its_fingerprint)
-                copyButton.isEnabled = false
+                updateMyKeyDisplay(null)
             }
         })
 
@@ -123,6 +115,15 @@ class KeysFragment() : Fragment() {
             )
         }
 
+        deleteMyKeyButton.setOnClickListener {
+            val keyToDelete = selectedMyKey
+            if (keyToDelete == null) {
+                Toast.makeText(context, R.string.no_key_selected, Toast.LENGTH_SHORT).show()
+            } else {
+                showDeleteMyKeyConfirmDialog(keyToDelete)
+            }
+        }
+
         return root
     }
 
@@ -141,6 +142,17 @@ class KeysFragment() : Fragment() {
 
     private fun getFingerprint(key: PGPPublicKey): String {
         return String(Hex.encode(key.fingerprint))
+    }
+
+    private fun updateMyKeyDisplay(keyItem: KeyItem?) {
+        selectedMyKey = keyItem
+        if (keyItem != null) {
+            publicKeyDisplay.text = getFingerprint(keyItem.publicKey)
+            copyButton.isEnabled = true
+        } else {
+            publicKeyDisplay.text = getString(R.string.select_a_key_to_view_its_fingerprint)
+            copyButton.isEnabled = false
+        }
     }
 
     private fun copyToClipboard(publicKeyRing: PGPPublicKeyRing) {
@@ -169,7 +181,7 @@ class KeysFragment() : Fragment() {
                         java.io.File(context.filesDir, "$alias.imported.pgp")
                     )
                     if (publicKey != null && publicKeyRing != null) {
-                        val fingerprint = "${String(Hex.encode(publicKey.fingerprint)).take(16)}..."
+                        val fingerprint = String(Hex.encode(publicKey.fingerprint))
                         val newKey = KeyItem(alias, fingerprint, publicKey, publicKeyRing)
                         adapter.addKey(newKey)
                     } else {
@@ -180,6 +192,21 @@ class KeysFragment() : Fragment() {
                 }
             }
             setNegativeButton("Cancel", null)
+            create().show()
+        }
+    }
+
+    private fun showDeleteMyKeyConfirmDialog(keyItem: KeyItem) {
+        AlertDialog.Builder(context).apply {
+            setTitle(R.string.delete_key_confirm_title)
+            setMessage(getString(R.string.delete_key_confirm_message, keyItem.alias))
+            setPositiveButton(R.string.delete_key) { _, _ ->
+                keyManager.deleteMyKey(keyItem.alias)
+                Toast.makeText(context, R.string.key_deleted, Toast.LENGTH_SHORT).show()
+                loadMyKeys()
+                updateMyKeyDisplay(myKeys.firstOrNull())
+            }
+            setNegativeButton(android.R.string.cancel, null)
             create().show()
         }
     }

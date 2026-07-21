@@ -21,7 +21,7 @@
     <string name="decryption_failed">Decryption failed: %1$s</string>
     <string name="welcome_to_easygpg">Welcome to EasyGPG</string>
     <string name="home_no_keys_found">You don\'t have any keys yet.\nGo to options to create or import your keys.</string>
-    <string name="key_fingerprint">%1$s...</string>
+    <string name="key_fingerprint">%1$s</string>
     <string name="public_key_appears_here">Public Key Appears Here</string>
     <string name="copy_public_key">Copy Public Key</string>
     <string name="import_public_key">Import Public Key</string>
@@ -29,4 +29,10 @@
     <string name="enter_message_to_decrypt">Enter message to decrypt</string>
     <string name="you_re_all_set_your_keys_are_ready_to_use">You\'re all set! Your keys are ready to use.</string>
     <string name="obfuscate_pgp_markers">obfuscate_pgp_markers</string>
+    <string name="delete_key">Delete</string>
+    <string name="delete_key_confirm_title">Delete key</string>
+    <string name="delete_key_confirm_message">Delete \'%1$s\'? This permanently removes its private key. Messages encrypted to this key can no longer be decrypted.</string>
+    <string name="delete_imported_key_confirm_message">Delete \'%1$s\'? This cannot be undone.</string>
+    <string name="key_deleted">Key deleted</string>
+    <string name="no_key_selected">No key selected</string>
 </resources>
