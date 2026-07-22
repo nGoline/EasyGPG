@@ -10,4 +10,4 @@ data class KeyItem(
     val publicKeyRing: PGPPublicKeyRing
 )
 
-fun shortFingerprint(fingerprint: String): String = fingerprint.takeLast(8)
+fun shortFingerprint(fingerprint: String): String = fingerprint.takeLast(8).uppercase()
