@@ -11,9 +11,12 @@
         android:id="@+id/editTextMessage"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:minLines="4"
+        android:gravity="top|start"
         android:autofillHints="text"
         android:hint="@string/enter_message"
-        android:inputType="text" />
+        android:inputType="textMultiLine"
+        android:scrollbars="vertical" />
 
     <Spinner
         android:id="@+id/spinnerPublicKeys"
