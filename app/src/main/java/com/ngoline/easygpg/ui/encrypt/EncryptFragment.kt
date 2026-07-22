@@ -15,6 +15,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.ngoline.easygpg.data.KeyItem
+import com.ngoline.easygpg.data.shortFingerprint
 import com.ngoline.easygpg.PGPKeyManager
 import com.ngoline.easygpg.R
 import com.ngoline.easygpg.databinding.FragmentEncryptBinding
@@ -104,8 +105,8 @@ class EncryptFragment : Fragment() {
                 ?: listOf(keyItem.publicKey).filter { it.isEncryptionKey }
 
             encryptionKeys.map { pubKey ->
-                val shortFingerprint = Hex.toHexString(pubKey.fingerprint).substring(0, 16)
-                "${keyItem.alias} ($shortFingerprint)" to pubKey
+                val fingerprint = Hex.toHexString(pubKey.fingerprint)
+                "${keyItem.alias} (${shortFingerprint(fingerprint)})" to pubKey
             }
         }
 

@@ -23,7 +23,7 @@ class KeyAdapter(private val keys: MutableList<KeyItem>, private val context: Co
         val keyItem = getItem(position) as KeyItem
         view.findViewById<TextView>(R.id.textAlias).text = keyItem.alias
         view.findViewById<TextView>(R.id.textFingerprint).text =
-            context.getString(R.string.key_fingerprint, keyItem.fingerprint.takeLast(8))
+            context.getString(R.string.key_fingerprint, shortFingerprint(keyItem.fingerprint))
 
         val deleteButton = view.findViewById<Button>(R.id.buttonDelete)
         deleteButton.setOnClickListener {
