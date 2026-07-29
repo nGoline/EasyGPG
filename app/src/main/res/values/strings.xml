@@ -24,6 +24,14 @@
     <string name="key_fingerprint">%1$s</string>
     <string name="public_key_appears_here">Public Key Appears Here</string>
     <string name="copy_public_key">Copy Public Key</string>
+    <string name="export_private_key">Export Private Key</string>
+    <string name="export_private_key_warning_title">Export private key?</string>
+    <string name="export_private_key_warning_message">This is a dangerous action. Anyone who gets this private key and its passphrase can read messages encrypted to you and impersonate you. Keep it secret, copy it only to a trusted destination, and clear the clipboard when finished.</string>
+    <string name="continue_export">Continue</string>
+    <string name="authenticate_to_export_private_key">Authenticate again to export your private key</string>
+    <string name="private_key_copied">Private key copied to clipboard</string>
+    <string name="private_key_export_failed">Could not export the private key</string>
+    <string name="authentication_required_for_export">Authentication is required to export a private key</string>
     <string name="import_public_key">Import Public Key</string>
     <string name="select_a_key_to_view_its_fingerprint">Select a key to view its fingerprint</string>
     <string name="enter_message_to_decrypt">Enter message to decrypt</string>

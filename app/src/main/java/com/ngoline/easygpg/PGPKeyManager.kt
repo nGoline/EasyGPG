@@ -278,6 +278,28 @@ class PGPKeyManager(private val context: Context) {
         return keys
     }
 
+    fun exportPrivateKey(alias: String): String? {
+        val file = File(context.filesDir, "$alias.secret_keyring.pgp")
+        if (!file.isFile) return null
+
+        return try {
+            val data = decryptFromFile(file)
+            val secretKeyRing = PGPSecretKeyRing(
+                PGPUtil.getDecoderStream(data.inputStream()),
+                BcKeyFingerprintCalculator()
+            )
+            ByteArrayOutputStream().use { output ->
+                ArmoredOutputStream(output).use { armored ->
+                    secretKeyRing.encode(armored)
+                }
+                output.toString(Charsets.UTF_8.name())
+            }
+        } catch (e: Exception) {
+            Log.e(LOG_TAG, "Failed to export private key for alias '$alias'", e)
+            null
+        }
+    }
+
     fun importPublicKey(alias: String, keyData: String): PGPPublicKey? {
         try {
             val inputStream = ByteArrayInputStream(keyData.toByteArray())
