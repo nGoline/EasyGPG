@@ -44,6 +44,12 @@
         android:text="@string/copy_public_key" />
 
     <Button
+        android:id="@+id/exportPrivateKeyButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/export_private_key" />
+
+    <Button
         android:id="@+id/importButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
