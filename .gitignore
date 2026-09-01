@@ -23,6 +23,9 @@ local.properties
 keystore.properties
 signing.properties
 
+# Release runbook — describes the signing and Play setup, kept out of the public repo
+/RELEASING.md
+
 # Build outputs / release artifacts
 *.apk
 *.aab
