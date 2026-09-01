@@ -94,20 +94,50 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: |
+            set -e
             adb wait-for-device
-            # PGPKeyManager seals secret key rings with a Keystore key that requires user
-            # authentication. Creating it needs a secure lock screen; using it needs an unlock
-            # within SECRET_KEY_AUTH_VALIDITY_SECONDS, and a PIN unlock counts. Without this the
-            # secret-key tests skip themselves (see PGPKeyManagerSecretKeyTest).
+
+            # Build BEFORE authenticating. PGPKeyManager seals secret key rings with a Keystore key
+            # usable only for SECRET_KEY_AUTH_VALIDITY_SECONDS (300) after an unlock, and a cold
+            # Gradle build can outlast that window — which would fail the secret-key tests rather
+            # than skip them, since isDeviceSecure stays true.
+            ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest
+
             adb shell input keyevent KEYCODE_WAKEUP
             adb shell locksettings set-pin 1234
             # Lock, then unlock with the PIN so the Keystore records a real authentication.
             adb shell input keyevent KEYCODE_SLEEP
+            sleep 2
             adb shell input keyevent KEYCODE_WAKEUP
+            sleep 2
             adb shell input keyevent KEYCODE_MENU
+            sleep 1
             adb shell input text 1234
             adb shell input keyevent KEYCODE_ENTER
-            adb shell dumpsys deviceidle unforce || true
+            sleep 3
+
+            # Confirm the unlock actually took. If it silently did not, every authenticated test
+            # errors out with something that looks nothing like "the device is still locked".
+            state="unknown"
+            for _ in 1 2 3 4 5 6 7 8 9 10; do
+              dump="$(adb shell dumpsys window 2>/dev/null || true)"
+              case "$dump" in
+                *mDreamingLockscreen=false*) state="unlocked"; break ;;
+                *mDreamingLockscreen=true*)  state="locked" ;;
+              esac
+              sleep 2
+            done
+            case "$state" in
+              unlocked) echo "Device unlocked; authenticated Keystore tests can run." ;;
+              locked)
+                echo "::error::Device is still locked — the authenticated Keystore tests cannot run."
+                adb shell dumpsys window | grep -iE "lockscreen|keyguard" | head -5 || true
+                exit 1 ;;
+              *)
+                # Do not fail on an unrecognised dumpsys format; the tests themselves will say.
+                echo "::warning::Could not determine lock state from dumpsys; continuing." ;;
+            esac
+
             ./gradlew --no-daemon connectedDebugAndroidTest
 
       - name: Upload instrumented test reports
