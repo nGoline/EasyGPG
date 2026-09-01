@@ -30,6 +30,9 @@ class PGPKeyManagerEncryptionTest {
 
     @Before
     fun setUp() {
+        // Matches MainActivity: without the bundled provider, encrypting to a Curve25519
+        // subkey fails on a device even though Robolectric's own "BC" would carry it.
+        installBouncyCastleProvider()
         manager = PGPKeyManager(context)
         context.filesDir.listFiles()?.forEach { it.delete() }
         PreferenceManager.getDefaultSharedPreferences(context).edit().clear().commit()

@@ -13,6 +13,7 @@ import java.io.ByteArrayInputStream
 import java.io.File
 import java.security.GeneralSecurityException
 import java.security.SecureRandom
+import java.security.Security
 import java.security.UnrecoverableKeyException
 import java.util.Date
 import java.util.concurrent.ConcurrentHashMap
@@ -23,6 +24,7 @@ import javax.crypto.spec.GCMParameterSpec
 import kotlin.collections.filter
 import org.bouncycastle.bcpg.ArmoredInputStream
 import org.bouncycastle.bcpg.ArmoredOutputStream
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.bcpg.HashAlgorithmTags
 import org.bouncycastle.bcpg.PublicKeyAlgorithmTags
 import org.bouncycastle.crypto.generators.Ed25519KeyPairGenerator
@@ -93,6 +95,22 @@ private fun ByteArray.startsWith(prefix: ByteArray): Boolean =
  * Key rings still using it are re-encrypted by [PGPKeyManager.migrateLegacyKeyPassphrases].
  */
 private const val LEGACY_PASSPHRASE = "passphrase"
+
+/**
+ * Replaces Android's cut-down BouncyCastle with the full build this app bundles, and puts it first
+ * so `setProvider("BC")` resolves to it.
+ *
+ * [PGPKeyManager.encryptMessage] goes through Bouncy Castle's JCE operators, which look algorithms
+ * up by provider name. Android ships its own trimmed "BC" provider with no `XDH`, so without this
+ * call encrypting to a Curve25519 subkey fails with `NoSuchAlgorithmException: no such algorithm:
+ * XDH for provider BC`. Decryption uses the lightweight `Bc*` operators and does not depend on it.
+ *
+ * Idempotent, so every entry point into the app can call it.
+ */
+fun installBouncyCastleProvider() {
+    Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME)
+    Security.insertProviderAt(BouncyCastleProvider(), 1)
+}
 
 object PGPConstants {
     const val PGP_MARKER = "-----BEGIN PGP MESSAGE-----"

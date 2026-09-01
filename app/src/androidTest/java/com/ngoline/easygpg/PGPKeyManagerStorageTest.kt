@@ -32,6 +32,9 @@ class PGPKeyManagerStorageTest {
 
     @Before
     fun setUp() {
+        // MainActivity does this at startup; encryption needs the bundled provider and
+        // these tests never launch the Activity.
+        installBouncyCastleProvider()
         context.filesDir.listFiles()?.forEach { it.delete() }
         manager = PGPKeyManager(context)
     }
