@@ -4,6 +4,15 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization") version "2.2.0"
 }
 
+/**
+ * The CI upload key, supplied through the environment by the release workflow and never stored in
+ * the repository or in a properties file. When these are unset — every local build — no signing
+ * config is created and `assembleRelease` produces an unsigned build, exactly as it did before.
+ * The app signing key itself stays offline: Play App Signing holds it, and this key only
+ * authorises uploads.
+ */
+val uploadKeystore = System.getenv("UPLOAD_KEYSTORE_FILE")?.let(::file)?.takeIf { it.isFile }
+
 android {
     namespace = "com.ngoline.easygpg"
     compileSdk = 36
@@ -18,8 +27,21 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (uploadKeystore != null) {
+            create("upload") {
+                storeFile = uploadKeystore
+                storePassword = System.getenv("UPLOAD_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("UPLOAD_KEY_ALIAS")
+                keyPassword = System.getenv("UPLOAD_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // Null off CI, which leaves the build unsigned rather than failing.
+            signingConfig = signingConfigs.findByName("upload")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
