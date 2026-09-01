@@ -24,6 +24,10 @@ local.properties
 keystore.properties
 signing.properties
 
+# Google Cloud service account keys — a Play publishing credential. These are downloaded with
+# names like <project>-<id>.json, so ignore stray JSON at the repository root outright.
+/*.json
+
 # Release runbook — describes the signing and Play setup, kept out of the public repo
 /RELEASING.md
 
