@@ -33,6 +33,9 @@ jobs:
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
+        with:
+          # Full history and tags, so the versionCode check can read the previous release.
+          fetch-depth: 0
 
       - name: Validate the Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
@@ -49,18 +52,37 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # Play rejects a bundle whose versionCode it has already seen, and a tag that disagrees with
-      # the manifest makes releases impossible to trace. Catch both before anything is signed.
-      - name: Check the tag matches versionName
+      # A tag disagreeing with the manifest makes releases impossible to trace, and Play rejects a
+      # versionCode it has already accepted — after the whole pipeline has run. Catch both here.
+      - name: Check the tag and version
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           tag_version="${GITHUB_REF_NAME#v}"
           version_name="$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)"
+          version_code="$(sed -n 's/.*versionCode = \([0-9]*\).*/\1/p' app/build.gradle.kts)"
+
           if [ "$tag_version" != "$version_name" ]; then
             echo "::error::Tag $GITHUB_REF_NAME implies versionName $tag_version, but app/build.gradle.kts declares $version_name."
             exit 1
           fi
-          echo "Releasing versionName $version_name as $GITHUB_REF_NAME."
+          if [ -z "$version_code" ]; then
+            echo "::error::Could not read versionCode from app/build.gradle.kts."
+            exit 1
+          fi
+
+          # Compare against the previous tag, which catches the common mistake: bumping
+          # versionName for a release and forgetting versionCode.
+          previous="$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
+          if [ -n "$previous" ]; then
+            previous_code="$(git show "$previous:app/build.gradle.kts" 2>/dev/null \
+              | sed -n 's/.*versionCode = \([0-9]*\).*/\1/p')"
+            if [ -n "$previous_code" ] && [ "$version_code" -le "$previous_code" ]; then
+              echo "::error::versionCode $version_code is not greater than $previous_code at $previous. Play will reject it."
+              exit 1
+            fi
+            echo "versionCode $version_code (was $previous_code at $previous)."
+          fi
+          echo "Releasing versionName $version_name, versionCode $version_code as $GITHUB_REF_NAME."
 
       - name: Run the tests
         run: ./gradlew --no-daemon testDebugUnitTest lintDebug

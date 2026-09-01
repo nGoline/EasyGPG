@@ -11,7 +11,14 @@ plugins {
  * The app signing key itself stays offline: Play App Signing holds it, and this key only
  * authorises uploads.
  */
-val uploadKeystore = System.getenv("UPLOAD_KEYSTORE_FILE")?.let(::file)?.takeIf { it.isFile }
+/**
+ * An environment variable, treating blank as absent. GitHub Actions sets a variable mapped from an
+ * unset secret to the empty string rather than leaving it out, so a plain null check would let ""
+ * through and every fallback below would be dead code.
+ */
+fun env(name: String): String? = System.getenv(name)?.takeIf { it.isNotBlank() }
+
+val uploadKeystore = env("UPLOAD_KEYSTORE_FILE")?.let(::file)?.takeIf { it.isFile }
 
 android {
     namespace = "com.ngoline.easygpg"
@@ -31,17 +38,22 @@ android {
         if (uploadKeystore != null) {
             create("upload") {
                 storeFile = uploadKeystore
-                storePassword = System.getenv("UPLOAD_KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("UPLOAD_KEY_ALIAS")
+                storePassword = env("UPLOAD_KEYSTORE_PASSWORD")
+                keyAlias = env("UPLOAD_KEY_ALIAS")
                 // A PKCS12 keystore has a single password: keytool cannot give the key one of its
                 // own. Only set UPLOAD_KEY_PASSWORD for an old JKS that really does have two.
-                keyPassword = System.getenv("UPLOAD_KEY_PASSWORD")
-                    ?: System.getenv("UPLOAD_KEYSTORE_PASSWORD")
+                keyPassword = env("UPLOAD_KEY_PASSWORD") ?: env("UPLOAD_KEYSTORE_PASSWORD")
             }
         }
     }
 
     buildTypes {
+        debug {
+            // Keeps the debug build a separate install from the release one. The instrumented
+            // tests clear the target app's filesDir, which would otherwise destroy the key rings
+            // of anyone running them against a phone carrying their own build.
+            applicationIdSuffix = ".debug"
+        }
         release {
             // Null off CI, which leaves the build unsigned rather than failing.
             signingConfig = signingConfigs.findByName("upload")
