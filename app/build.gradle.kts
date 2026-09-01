@@ -33,7 +33,10 @@ android {
                 storeFile = uploadKeystore
                 storePassword = System.getenv("UPLOAD_KEYSTORE_PASSWORD")
                 keyAlias = System.getenv("UPLOAD_KEY_ALIAS")
+                // A PKCS12 keystore has a single password: keytool cannot give the key one of its
+                // own. Only set UPLOAD_KEY_PASSWORD for an old JKS that really does have two.
                 keyPassword = System.getenv("UPLOAD_KEY_PASSWORD")
+                    ?: System.getenv("UPLOAD_KEYSTORE_PASSWORD")
             }
         }
     }
