@@ -40,8 +40,25 @@ class PGPKeyManagerSecretKeyTest {
             "needs a secure lock screen; run with a PIN set and the device unlocked",
             keyguard.isDeviceSecure,
         )
+        // MainActivity does this at startup; encryption needs the bundled provider and
+        // these tests never launch the Activity.
+        installBouncyCastleProvider()
         context.filesDir.listFiles()?.forEach { it.delete() }
         manager = PGPKeyManager(context)
+    }
+
+    /**
+     * Encryption failures are swallowed into a plain string, which then reaches decryptMessage as
+     * unparseable text and surfaces as NoUsableKey — a symptom that points nowhere near the cause.
+     * Fail at the encryption step instead.
+     */
+    private fun encrypt(message: String, publicKey: org.bouncycastle.openpgp.PGPPublicKey): String {
+        val armored = manager.encryptMessage(message.toCharArray(), publicKey)
+        assertFalse(
+            "encryptMessage failed; check the BouncyCastle provider is installed",
+            armored == "Encryption failed",
+        )
+        return armored
     }
 
     @Test
@@ -49,7 +66,7 @@ class PGPKeyManagerSecretKeyTest {
         assertTrue(manager.generateAndSaveKeys("me", passphrase.copyOf()))
 
         val publicKey = TestKeyRings.encryptionKey(manager.getMyPublicKeys().single().publicKeyRing)
-        val armored = manager.encryptMessage("attack at dawn".toCharArray(), publicKey)
+        val armored = encrypt("attack at dawn", publicKey)
 
         val result = manager.decryptMessage(armored, passphrase.copyOf())
 
@@ -74,7 +91,7 @@ class PGPKeyManagerSecretKeyTest {
     fun theWrongPassphraseIsReportedRatherThanTreatedAsNoKey() {
         assertTrue(manager.generateAndSaveKeys("me", passphrase.copyOf()))
         val publicKey = TestKeyRings.encryptionKey(manager.getMyPublicKeys().single().publicKeyRing)
-        val armored = manager.encryptMessage("attack at dawn".toCharArray(), publicKey)
+        val armored = encrypt("attack at dawn", publicKey)
 
         val result = manager.decryptMessage(armored, "wrong".toCharArray())
 
@@ -89,10 +106,7 @@ class PGPKeyManagerSecretKeyTest {
 
         // Encrypted to a key ring this device does not hold.
         val (_, strangers) = TestKeyRings.generate("other".toCharArray())
-        val armored = manager.encryptMessage(
-            "attack at dawn".toCharArray(),
-            TestKeyRings.encryptionKey(strangers),
-        )
+        val armored = encrypt("attack at dawn", TestKeyRings.encryptionKey(strangers))
 
         val result = manager.decryptMessage(armored, passphrase.copyOf())
 
@@ -103,7 +117,7 @@ class PGPKeyManagerSecretKeyTest {
     fun anObfuscatedMessageRoundTripsThroughDecrypt() {
         assertTrue(manager.generateAndSaveKeys("me", passphrase.copyOf()))
         val publicKey = TestKeyRings.encryptionKey(manager.getMyPublicKeys().single().publicKeyRing)
-        val armored = manager.encryptMessage("attack at dawn".toCharArray(), publicKey)
+        val armored = encrypt("attack at dawn", publicKey)
 
         // decryptMessage deobfuscates on the way in, so an obfuscated message must decrypt too.
         val obfuscated = armored.lines().joinToString("") { line ->
@@ -154,10 +168,7 @@ class PGPKeyManagerSecretKeyTest {
 
         assertEquals(1, manager.migrateLegacyKeyPassphrases(passphrase.copyOf()))
 
-        val armored = manager.encryptMessage(
-            "attack at dawn".toCharArray(),
-            TestKeyRings.encryptionKey(publicKeyRing),
-        )
+        val armored = encrypt("attack at dawn", TestKeyRings.encryptionKey(publicKeyRing))
         val result = manager.decryptMessage(armored, passphrase.copyOf())
 
         assertTrue("expected Decrypted, got $result", result is DecryptionResult.Decrypted)

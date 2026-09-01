@@ -21,8 +21,6 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.ngoline.easygpg.databinding.ActivityMainBinding
-import org.bouncycastle.jce.provider.BouncyCastleProvider
-import java.security.Security
 import kotlin.text.isNotEmpty
 import kotlin.text.split
 import androidx.biometric.BiometricManager
@@ -43,9 +41,7 @@ class MainActivity : AppCompatActivity(),
         applyPrivacyMode()
 
         // Register our BouncyCastle version
-        val bcProvider = BouncyCastleProvider()
-        Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME)
-        Security.insertProviderAt(bcProvider, 1)
+        installBouncyCastleProvider()
 
         // Nothing is shown until authentication succeeds.
         authenticateUser()
