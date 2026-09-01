@@ -10,8 +10,8 @@ on:
       track:
         description: Play track to publish to
         type: choice
-        default: internal
-        options: [internal, alpha, beta, production]
+        default: alpha
+        options: [alpha, internal, beta, production]
       status:
         description: Release status on that track
         type: choice
@@ -106,7 +106,8 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.ngoline.easygpg
           releaseFiles: app/build/outputs/bundle/release/app-release.aab
-          track: ${{ inputs.track || 'internal' }}
+          # Closed testing ("alpha"): the only track that can read the tester Google Group.
+          track: ${{ inputs.track || 'alpha' }}
           status: ${{ inputs.status || 'completed' }}
 
       # Keep the signed artifact for reference, but never the key.
