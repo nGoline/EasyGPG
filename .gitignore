@@ -20,6 +20,7 @@ local.properties
 # Signing material — never commit these
 *.jks
 *.keystore
+*.pem
 keystore.properties
 signing.properties
 
