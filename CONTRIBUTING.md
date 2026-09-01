@@ -16,9 +16,22 @@ pull requests.
   structure already in `app/src/main/java/com/ngoline/easygpg/`.
 - Keep pull requests focused — one logical change per PR is easier to review.
 - If you add or change behavior, describe how you tested it in the PR.
+- Add unit tests for logic that can be tested off-device. Anything touching the Android
+  Keystore (`PGPKeyManager`) still needs manual testing on a device — say so in the PR.
 - Do **not** commit machine-specific or sensitive files. `local.properties`,
   `.idea/`, keystores (`*.jks`, `*.keystore`), and build outputs (`*.apk`,
   `*.aab`) are already gitignored — please keep it that way.
+
+## Running the checks
+
+CI runs this on every pull request, and it is the same command locally:
+
+```sh
+./gradlew assembleDebug testDebugUnitTest lintDebug
+```
+
+Unit tests live in `app/src/test/`. Tests that need Android APIs — `SharedPreferences`, `Context`,
+`Handler` — run under Robolectric; see `PassphraseCacheTest` for the pattern.
 
 ## Reporting bugs & requesting features
 

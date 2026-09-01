@@ -7,6 +7,7 @@ import android.security.keystore.KeyProperties
 import android.security.keystore.UserNotAuthenticatedException
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.VisibleForTesting
 import com.ngoline.easygpg.data.KeyItem
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -763,7 +764,9 @@ class PGPKeyManager(private val context: Context) {
         }
     }
 
-    private fun deobfuscateMarkers(input: String): String {
+    /** Internal rather than private only so the obfuscation round trip can be tested directly. */
+    @VisibleForTesting
+    internal fun deobfuscateMarkers(input: String): String {
         // Remove all obfuscated markers, add BEGIN/END markers, and break lines to 64 chars
         val clean = input.replace(PGPConstants.OBFUSCATED_MARKER, "")
             .replace("\n", "")
