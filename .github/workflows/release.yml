@@ -68,12 +68,31 @@ jobs:
       - name: Decode the upload keystore
         env:
           UPLOAD_KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+          UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+          UPLOAD_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
         run: |
           if [ -z "$UPLOAD_KEYSTORE_BASE64" ]; then
             echo "::error::Secret UPLOAD_KEYSTORE_BASE64 is not set in the play-release environment."
             exit 1
           fi
-          printf '%s' "$UPLOAD_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          # Strip whitespace first: `base64` wraps its output on some platforms, and a secret
+          # pasted with line breaks would otherwise decode into a corrupt keystore.
+          printf '%s' "$UPLOAD_KEYSTORE_BASE64" | tr -d '[:space:]' | base64 -d > "$RUNNER_TEMP/upload.jks"
+
+          # Open it here rather than letting a bad secret surface as a confusing Gradle error.
+          if ! keytool -list -keystore "$RUNNER_TEMP/upload.jks" \
+                 -storepass "$UPLOAD_KEYSTORE_PASSWORD" > "$RUNNER_TEMP/ks.txt" 2>&1; then
+            echo "::error::Could not open the decoded keystore. Check UPLOAD_KEYSTORE_BASE64 and UPLOAD_KEYSTORE_PASSWORD."
+            sed 's/^/  /' "$RUNNER_TEMP/ks.txt" | head -5
+            exit 1
+          fi
+          if ! grep -qi "^$UPLOAD_KEY_ALIAS," "$RUNNER_TEMP/ks.txt"; then
+            echo "::error::Alias '$UPLOAD_KEY_ALIAS' is not in the keystore. It contains:"
+            grep -i "PrivateKeyEntry" "$RUNNER_TEMP/ks.txt" | sed 's/^/  /'
+            exit 1
+          fi
+          echo "Keystore opened; alias '$UPLOAD_KEY_ALIAS' present."
+          rm -f "$RUNNER_TEMP/ks.txt"
 
       - name: Build the release bundle
         env:
@@ -122,4 +141,4 @@ jobs:
 
       - name: Remove the keystore from the runner
         if: always()
-        run: rm -f "$RUNNER_TEMP/upload.jks"
+        run: rm -f "$RUNNER_TEMP/upload.jks" "$RUNNER_TEMP/ks.txt"
