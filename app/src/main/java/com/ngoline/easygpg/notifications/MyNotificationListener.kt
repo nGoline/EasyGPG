@@ -15,6 +15,9 @@ import com.ngoline.easygpg.R
 
 const val LOG_TAG = "NotificationListener"
 
+/** Carries the notification's id to [MainActivity] so it can be cleared once the message is read. */
+const val EXTRA_NOTIFICATION_ID = "notification_id"
+
 /** First id used for a detected-message notification; the old single notification used 1001. */
 private const val NOTIFICATION_ID_BASE = 1001
 
@@ -79,6 +82,7 @@ class MyNotificationListener : NotificationListenerService() {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             putExtra("encrypted_message", msg)
+            putExtra(EXTRA_NOTIFICATION_ID, notificationId)
         }
         // The request code must differ per message too. Extras are not part of a PendingIntent's
         // identity, so with a fixed request code every notification would share one PendingIntent
@@ -96,9 +100,11 @@ class MyNotificationListener : NotificationListenerService() {
             .setContentText("Tap to decrypt the PGP message.")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
-            // Tapping opens the message for decryption, so the prompt has done its job and should
-            // clear itself rather than linger over a message already dealt with.
-            .setAutoCancel(true)
+            // Deliberately not setAutoCancel(true). That dismisses the notification the instant it
+            // is tapped, which is before the app has authenticated — so failing or dismissing the
+            // biometric prompt would take the only route back to the message with it. MainActivity
+            // cancels this notification itself once the message is actually on screen.
+            .setAutoCancel(false)
             .build()
 
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
