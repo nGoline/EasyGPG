@@ -1,9 +1,11 @@
 package com.ngoline.easygpg.ui.keys
 
 import android.content.ClipData
+import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
 import android.os.Bundle
+import android.os.PersistableBundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,6 +17,9 @@ import android.widget.ArrayAdapter
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.ngoline.easygpg.data.KeyAdapter
@@ -40,6 +45,7 @@ class KeysFragment() : Fragment() {
     private lateinit var listViewKeys: ListView
     private lateinit var publicKeyDisplay: TextView
     private lateinit var copyButton: Button
+    private lateinit var exportPrivateKeyButton: Button
     private lateinit var importButton: Button
     private lateinit var adapter: KeyAdapter
     private lateinit var context: Context
@@ -77,6 +83,7 @@ class KeysFragment() : Fragment() {
         listViewKeys = root.findViewById(R.id.listViewKeys)
         publicKeyDisplay = root.findViewById(R.id.publicKeyDisplay)
         copyButton = root.findViewById(R.id.copyButton)
+        exportPrivateKeyButton = root.findViewById(R.id.exportPrivateKeyButton)
         importButton = root.findViewById(R.id.importButton)
         spinnerMyKeys = root.findViewById(R.id.spinnerMyKeys)
         deleteMyKeyButton = root.findViewById(R.id.deleteMyKeyButton)
@@ -100,6 +107,10 @@ class KeysFragment() : Fragment() {
             selectedMyKey?.let {
                 copyToClipboard(it.publicKeyRing)
             }
+        }
+
+        exportPrivateKeyButton.setOnClickListener {
+            selectedMyKey?.let(::showExportPrivateKeyWarning)
         }
 
         importButton.setOnClickListener {
@@ -140,9 +151,11 @@ class KeysFragment() : Fragment() {
         if (keyItem != null) {
             publicKeyDisplay.text = getFingerprint(keyItem.publicKey)
             copyButton.isEnabled = true
+            exportPrivateKeyButton.isEnabled = true
         } else {
             publicKeyDisplay.text = getString(R.string.select_a_key_to_view_its_fingerprint)
             copyButton.isEnabled = false
+            exportPrivateKeyButton.isEnabled = false
         }
     }
 
@@ -152,6 +165,64 @@ class KeysFragment() : Fragment() {
         val clip = ClipData.newPlainText("Public Key", formattedKey)
         clipboard.setPrimaryClip(clip)
         Toast.makeText(context, "Public key copied to clipboard", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun showExportPrivateKeyWarning(keyItem: KeyItem) {
+        AlertDialog.Builder(context).apply {
+            setTitle(R.string.export_private_key_warning_title)
+            setMessage(R.string.export_private_key_warning_message)
+            setPositiveButton(R.string.continue_export) { _, _ ->
+                authenticateForPrivateKeyExport(keyItem)
+            }
+            setNegativeButton(android.R.string.cancel, null)
+            create().show()
+        }
+    }
+
+    private fun authenticateForPrivateKeyExport(keyItem: KeyItem) {
+        val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or
+            BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        if (BiometricManager.from(requireContext()).canAuthenticate(authenticators) !=
+            BiometricManager.BIOMETRIC_SUCCESS
+        ) {
+            Toast.makeText(context, R.string.authentication_required_for_export, Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle(getString(R.string.export_private_key))
+            .setSubtitle(getString(R.string.authenticate_to_export_private_key))
+            .setAllowedAuthenticators(authenticators)
+            .build()
+        val prompt = BiometricPrompt(
+            this,
+            ContextCompat.getMainExecutor(requireContext()),
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(
+                    result: BiometricPrompt.AuthenticationResult
+                ) {
+                    super.onAuthenticationSucceeded(result)
+                    copyPrivateKeyToClipboard(keyItem.alias)
+                }
+            }
+        )
+        prompt.authenticate(promptInfo)
+    }
+
+    private fun copyPrivateKeyToClipboard(alias: String) {
+        val privateKey = keyManager.exportPrivateKey(alias)
+        if (privateKey == null) {
+            Toast.makeText(context, R.string.private_key_export_failed, Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText(getString(R.string.export_private_key), privateKey)
+        clip.description.extras = PersistableBundle().apply {
+            putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
+        }
+        clipboard.setPrimaryClip(clip)
+        Toast.makeText(context, R.string.private_key_copied, Toast.LENGTH_SHORT).show()
     }
 
     private fun showImportKeyDialog(context: Context) {
