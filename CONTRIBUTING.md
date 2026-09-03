@@ -33,6 +33,15 @@ CI runs this on every pull request, and it is the same command locally:
 Unit tests live in `app/src/test/`. Tests that need Android APIs — `SharedPreferences`, `Context`,
 `Handler` — run under Robolectric; see `PassphraseCacheTest` for the pattern.
 
+## Releases
+
+User-facing changes go in [CHANGELOG.md](CHANGELOG.md) under the version they ship in.
+
+The text Google Play shows as "What's new" lives in `distribution/whatsnew/whatsnew-en-US`
+and is uploaded by the release workflow, so it is reviewed in the pull request that changes
+it rather than typed into the console at release time. Play allows **500 characters** per
+locale; the release fails if a file is longer, empty, or missing.
+
 ## Reporting bugs & requesting features
 
 Open a GitHub issue with:

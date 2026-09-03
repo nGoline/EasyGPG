@@ -89,6 +89,10 @@ jobs:
           fi
           echo "Releasing versionName $version_name, versionCode $version_code from $GITHUB_REF_NAME."
 
+      # Cheap, and catches a release that would silently publish with no notes.
+      - name: Check the release notes
+        run: .github/scripts/check-release-notes.sh
+
       - name: Run the tests
         run: ./gradlew --no-daemon testDebugUnitTest lintDebug
 
@@ -159,6 +163,9 @@ jobs:
           # The upload therefore lands as a draft for you to submit from the console. Once the app
           # has been published once, "completed" becomes available from the dispatch menu.
           status: ${{ inputs.status || 'draft' }}
+          # Release notes travel with the code, so they are reviewed in the pull request that
+          # changes them rather than retyped into the console at release time.
+          whatsNewDirectory: distribution/whatsnew
 
       # Keep the signed artifact for reference, but never the key.
       - name: Upload the bundle as a build artifact
