@@ -17,12 +17,31 @@ Run `.github/scripts/check-listing.sh` to confirm each file is within its limit.
 
 ## Visual assets
 
-Play also requires, and these are **not** in the repository because they are binaries:
+In `en-US/graphics/`. The artwork masters live in `graphics/source/`; the files Play actually
+wants are derived from them by `build-graphics.py`, so they are reproducible rather than
+hand-cropped. Re-run it after changing the artwork or the wording on the feature graphic:
 
-| Asset | Size | Notes |
+```sh
+python3 distribution/listing/build-graphics.py
+```
+
+| Asset | File | Requirement |
 | --- | --- | --- |
-| App icon | 512×512 PNG, 32-bit | No transparency, no rounded corners — Play applies the mask |
-| Feature graphic | 1024×500 PNG or JPEG | Shown at the top of the listing; no transparency |
-| Phone screenshots | 2–8, min 320px on the short edge | 16:9 or 9:16, PNG or JPEG |
+| App icon | `icon-512.png` | 512×512 PNG, under 1 MB, square — Play applies its own corner mask, so do not pre-round |
+| Feature graphic | `feature-graphic-1024x500.png` | 1024×500, no transparency |
+| Phone screenshots | not yet captured | 2–8, min 320px on the short edge, 16:9 or 9:16 |
 
 Tablet, Chromebook and Android XR screenshots are optional.
+
+### Screenshots
+
+Not captured yet. When taking them, use a **throwaway key** — a fingerprint in a store
+screenshot is public forever. Note also that privacy mode blocks screenshots on a real device,
+so they have to come from an emulator or with privacy mode turned off.
+
+### The launcher icon is not this icon
+
+`en-US/graphics/icon-512.png` is the store listing icon. The icon inside the app is still
+`app/src/main/res/mipmap-*/ic_launcher`, which is the unmodified Android Studio template — a
+green robot. Replacing it is a separate change: adaptive icons need foreground and background
+layers, not a single square image.
