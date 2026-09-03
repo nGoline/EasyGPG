@@ -15,8 +15,8 @@ on:
       status:
         description: Release status on that track
         type: choice
-        default: completed
-        options: [completed, draft]
+        default: draft
+        options: [draft, completed]
 
 permissions:
   contents: read
@@ -149,7 +149,11 @@ jobs:
           releaseFiles: app/build/outputs/bundle/release/app-release.aab
           # Closed testing ("alpha"): the only track that can read the tester Google Group.
           track: ${{ inputs.track || 'alpha' }}
-          status: ${{ inputs.status || 'completed' }}
+          # Play refuses anything but "draft" while the app itself is a draft — one that has never
+          # had a published release: "Only releases with status draft may be created on draft app."
+          # The upload therefore lands as a draft for you to submit from the console. Once the app
+          # has been published once, "completed" becomes available from the dispatch menu.
+          status: ${{ inputs.status || 'draft' }}
 
       # Keep the signed artifact for reference, but never the key.
       - name: Upload the bundle as a build artifact
