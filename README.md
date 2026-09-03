@@ -64,6 +64,12 @@ Easy GPG handles cryptographic material, so please treat it with care:
 - Found a vulnerability? Please **do not** open a public issue. Instead, report
   it privately to the maintainer (see [CONTRIBUTING.md](CONTRIBUTING.md)).
 
+## Privacy
+
+Easy GPG collects nothing and has no servers — it does not even hold the `INTERNET`
+permission. See [PRIVACY.md](PRIVACY.md) for what it stores on your device and why it asks
+for notification access.
+
 ## License
 
 Easy GPG is free software licensed under the
