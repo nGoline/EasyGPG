@@ -1,0 +1,56 @@
+Easy GPG makes PGP encryption approachable on Android. Encrypt a message to someone's public key, decrypt what they send back, manage your key rings, and use a hardware YubiKey — without touching a command line.
+
+⚠️ ALPHA SOFTWARE — NOT AUDITED
+Easy GPG is under active development and has not been security audited. Do not rely on it to protect information whose disclosure would put you at risk.
+
+━━━━━━━━━━━━━━━━━━━━
+
+NOTHING LEAVES YOUR DEVICE
+
+Easy GPG does not hold the INTERNET permission. It cannot send your keys, your messages, or anything else anywhere — that is enforced by Android, not merely promised. There are no servers, no accounts, no analytics, and no advertising.
+
+WHAT IT DOES
+
+• Encrypt messages to any PGP public key you have imported
+• Decrypt messages sent to you, with your private key
+• Generate Ed25519 and Curve25519 key rings on the device
+• Import and manage public keys, with fingerprints shown for verification
+• Export a private key, after you authenticate
+• Use a YubiKey over USB or NFC, via its OpenPGP applet
+
+HOW YOUR KEYS ARE PROTECTED
+
+• Private key rings are encrypted with a passphrase you choose
+• They are additionally sealed with an Android Keystore key that requires your fingerprint or device PIN, so they cannot be read without you present
+• Passphrases are held in memory only, overwritten when they expire, and gone when the app closes
+• You choose how long a passphrase is remembered: until the screen turns off, one hour, or one day
+• Secret text is kept in buffers the app overwrites after use
+
+PRIVACY MODE
+
+• Keeps the app out of screenshots and the recents list
+• Blocks other apps from drawing over it
+• Stops the keyboard learning what you type, so passphrases and plaintext never reach its dictionary or predictions
+• Optionally clears the encrypt and decrypt fields after each operation
+
+DETECTING ENCRYPTED MESSAGES
+
+Optionally, Easy GPG can watch notifications for incoming PGP messages and offer to decrypt them. Notification text is examined on your device only, nothing about other notifications is stored, and the permission is granted in Android settings and revocable at any time. The app works fully without it.
+
+━━━━━━━━━━━━━━━━━━━━
+
+THINGS TO UNDERSTAND BEFORE YOU START
+
+• Your passphrase cannot be recovered. If you forget it, messages encrypted to that key can no longer be decrypted — by you or by anyone.
+• Removing or resetting your device lock screen destroys the Keystore key protecting your private keys, and with it access to them. This is deliberate.
+• Wiping the app's data, or uninstalling it, removes your keys. Export anything you want to keep.
+
+OPEN SOURCE
+
+Easy GPG is free software under the GNU GPLv3. The source is public, so every claim above can be checked rather than taken on trust.
+
+github.com/nGoline/EasyGPG
+
+Built on Bouncy Castle for OpenPGP and Yubico's YubiKit for hardware keys.
+
+Contributions, bug reports, and review of the cryptographic code are all welcome. Please report security vulnerabilities privately rather than in a public issue.
