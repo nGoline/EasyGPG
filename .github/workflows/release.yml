@@ -55,15 +55,17 @@ jobs:
       # A tag disagreeing with the manifest makes releases impossible to trace, and Play rejects a
       # versionCode it has already accepted — after the whole pipeline has run. Catch both here.
       - name: Check the tag and version
-        if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          tag_version="${GITHUB_REF_NAME#v}"
           version_name="$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)"
           version_code="$(sed -n 's/.*versionCode = \([0-9]*\).*/\1/p' app/build.gradle.kts)"
 
-          if [ "$tag_version" != "$version_name" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME implies versionName $tag_version, but app/build.gradle.kts declares $version_name."
-            exit 1
+          # Only a tag can disagree with versionName; a dispatch has no version in its ref.
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            tag_version="${GITHUB_REF_NAME#v}"
+            if [ "$tag_version" != "$version_name" ]; then
+              echo "::error::Tag $GITHUB_REF_NAME implies versionName $tag_version, but app/build.gradle.kts declares $version_name."
+              exit 1
+            fi
           fi
           if [ -z "$version_code" ]; then
             echo "::error::Could not read versionCode from app/build.gradle.kts."
@@ -72,7 +74,10 @@ jobs:
 
           # Compare against the previous tag, which catches the common mistake: bumping
           # versionName for a release and forgetting versionCode.
-          previous="$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
+          previous=""
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            previous="$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
+          fi
           if [ -n "$previous" ]; then
             previous_code="$(git show "$previous:app/build.gradle.kts" 2>/dev/null \
               | sed -n 's/.*versionCode = \([0-9]*\).*/\1/p')"
@@ -82,7 +87,7 @@ jobs:
             fi
             echo "versionCode $version_code (was $previous_code at $previous)."
           fi
-          echo "Releasing versionName $version_name, versionCode $version_code as $GITHUB_REF_NAME."
+          echo "Releasing versionName $version_name, versionCode $version_code from $GITHUB_REF_NAME."
 
       - name: Run the tests
         run: ./gradlew --no-daemon testDebugUnitTest lintDebug
