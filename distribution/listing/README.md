@@ -29,15 +29,37 @@ python3 distribution/listing/build-graphics.py
 | --- | --- | --- |
 | App icon | `icon-512.png` | 512×512 PNG, under 1 MB, square — Play applies its own corner mask, so do not pre-round |
 | Feature graphic | `feature-graphic-1024x500.png` | 1024×500, no transparency |
-| Phone screenshots | not yet captured | 2–8, min 320px on the short edge, 16:9 or 9:16 |
+| Phone screenshots | `screenshots/phone/` | 2–8, 320–3840px, longest side at most twice the shortest, 24-bit PNG with **no alpha** |
 
 Tablet, Chromebook and Android XR screenshots are optional.
 
 ### Screenshots
 
-Not captured yet. When taking them, use a **throwaway key** — a fingerprint in a store
-screenshot is public forever. Note also that privacy mode blocks screenshots on a real device,
-so they have to come from an emulator or with privacy mode turned off.
+Five, in `en-US/graphics/screenshots/phone/`, ordered to read as a sequence: encrypt, share the
+ciphertext anywhere, import someone's public key, protect the private key, privacy settings.
+
+**These are provisional.** They were taken before the Android Studio template leftovers were
+removed, so the app is still Material purple while the icon and feature graphic are indigo and
+brass. Retake them after that cleanup.
+
+Two rules that are easy to get wrong:
+
+- Play requires 9:16 only for the large-format **promotion** slots, not to publish. To publish,
+  the longest side must be at most twice the shortest — which a raw Pixel 9 Pro XL capture
+  (1344×2992, 2.23×) fails. Four of these are exact 9:16 so promotion stays available; the share
+  sheet is left at its natural ratio because cropping to 9:16 clipped the app labels.
+- Screenshots must be **24-bit PNG with no alpha**. `adb exec-out screencap -p` produces RGBA,
+  which has to be converted.
+
+When capturing: privacy mode blocks screenshots, so leave it off. Use a throwaway key — a
+fingerprint in a store screenshot is public permanently. And set the emulator to a sane size
+first, since Android Studio's capture grabs the whole framebuffer and letterboxes the app:
+
+```sh
+adb shell wm size 1080x1920 && adb shell wm density 420
+# ... capture ...
+adb shell wm size reset && adb shell wm density reset
+```
 
 ### The launcher icon is not this icon
 
