@@ -60,7 +60,7 @@ class MyNotificationListener : NotificationListenerService() {
         )
 
         val notification = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.drawable.ic_menu_camera)
+            .setSmallIcon(R.drawable.ic_notification_key)
             .setContentTitle("Encrypted Message Detected")
             .setContentText("Tap to decrypt the PGP message.")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
