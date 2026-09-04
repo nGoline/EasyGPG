@@ -1,6 +1,7 @@
 package com.ngoline.easygpg
 
 import android.Manifest
+import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -26,8 +27,12 @@ import kotlin.text.split
 import androidx.biometric.BiometricManager
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.PreferenceManager
+import com.ngoline.easygpg.notifications.EXTRA_NOTIFICATION_ID
 import com.ngoline.easygpg.ui.DeviceAuth
 import kotlinx.coroutines.launch
+
+/** Sentinel for "this activity was not opened from a detection notification". */
+private const val NO_NOTIFICATION_ID = -1
 
 class MainActivity : AppCompatActivity(),
     SharedPreferences.OnSharedPreferenceChangeListener {
@@ -141,7 +146,19 @@ class MainActivity : AppCompatActivity(),
                 putString("encrypted_message", encryptedMessage)
             }
             navController.navigate(R.id.nav_decrypt, bundle)
+            // Only now, with the message on screen. Everything before this point can still send
+            // the user away — a failed or dismissed authentication calls finish() — and clearing
+            // the notification any earlier would strand the message with no way back to it.
+            dismissDetectionNotification()
         }
+    }
+
+    /** Clears the notification this activity was opened from, if it was opened from one. */
+    private fun dismissDetectionNotification() {
+        val notificationId = intent.getIntExtra(EXTRA_NOTIFICATION_ID, NO_NOTIFICATION_ID)
+        if (notificationId == NO_NOTIFICATION_ID) return
+        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        manager.cancel(notificationId)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
