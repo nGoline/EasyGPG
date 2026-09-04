@@ -1,15 +1,16 @@
+<!-- Themed-icon layer. Android tints this, so it is a single flat shape. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
     <!-- Bow: a ring, drawn as two circles with evenOdd so it stays a ring when tinted. -->
     <path
-        android:fillColor="#FFC9A227"
+        android:fillColor="#FFFFFFFF"
         android:fillType="evenOdd"
         android:pathData="M54,36 m-14,0 a14,14 0 1,0 28,0 a14,14 0 1,0 -28,0 Z M54,36 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0 Z" />
     <!-- Shaft -->
-    <path android:fillColor="#FFC9A227" android:pathData="M50,49 h8 v33 h-8 z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M50,49 h8 v33 h-8 z" />
     <!-- Bit: the dashes of a PGP armor header, which is where the mark comes from. -->
-    <path android:fillColor="#FFC9A227" android:pathData="M58,58 h11 v5 h-11 z" />
-    <path android:fillColor="#FFC9A227" android:pathData="M58,66 h11 v5 h-11 z" />
-    <path android:fillColor="#FFC9A227" android:pathData="M58,74 h11 v5 h-11 z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M58,58 h11 v5 h-11 z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M58,66 h11 v5 h-11 z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M58,74 h11 v5 h-11 z" />
 </vector>

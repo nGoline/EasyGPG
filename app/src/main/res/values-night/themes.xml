@@ -1,17 +1,16 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
     <style name="Theme.EasyGPG" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
-        <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/purple_200</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
-        <item name="colorOnPrimary">@color/black</item>
-        <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_200</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <!-- Status bar color. -->
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-        <!-- Customize your theme here. -->
+        <!-- Lifted off the surface so the bar is distinguishable against a dark background. -->
+        <item name="colorPrimary">@color/ink_raised</item>
+        <item name="colorPrimaryVariant">@color/ink_deep</item>
+        <item name="colorOnPrimary">@color/paper</item>
+
+        <!-- The lifted brass reaches 10.12:1 on ink; the base brass is too dim on dark. -->
+        <item name="colorSecondary">@color/brass_lift</item>
+        <item name="colorSecondaryVariant">@color/brass</item>
+        <item name="colorOnSecondary">@color/ink_on_brass</item>
+
+        <item name="android:statusBarColor">@color/ink_deep</item>
     </style>
 
     <style name="Theme.EasyGPG.PopupOverlay" parent="ThemeOverlay.AppCompat.Dark" />

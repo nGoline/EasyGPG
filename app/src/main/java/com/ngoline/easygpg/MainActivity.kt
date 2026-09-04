@@ -11,7 +11,6 @@ import android.content.pm.PackageManager
 import android.provider.Settings
 import android.util.Log
 import android.view.MenuItem
-import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.navigation.NavigationView
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
@@ -98,10 +97,6 @@ class MainActivity : AppCompatActivity(),
 
         setSupportActionBar(binding.appBarMain.toolbar)
 
-        binding.appBarMain.fab.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                .setAction("Action", null).show()
-        }
         val drawerLayout: DrawerLayout = binding.drawerLayout
         val navView: NavigationView = binding.navView
         // Use supportFragmentManager to get the NavController safely
@@ -118,6 +113,11 @@ class MainActivity : AppCompatActivity(),
                 R.id.nav_home, R.id.nav_encrypt, R.id.nav_decrypt, R.id.nav_keys
             ), drawerLayout
         )
+        // Composing a message is the app's primary action, and the envelope already says so.
+        binding.appBarMain.fab.setOnClickListener {
+            navController.navigate(R.id.nav_encrypt)
+        }
+
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
 

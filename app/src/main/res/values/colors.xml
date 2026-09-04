@@ -1,10 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
+    <!--
+      Indigo and brass, matching the launcher icon, the store graphics and the landing page, so
+      the app and everything around it read as one product. Contrast was measured rather than
+      eyeballed; the notes below are the reason each value exists.
+    -->
+
+    <!-- Indigo. The app bar and other primary surfaces. -->
+    <color name="ink">#FF0E1420</color>
+    <color name="ink_deep">#FF080C14</color>
+    <color name="ink_raised">#FF161E2E</color>
+
+    <!-- Brass. A fill colour, not a text colour: brass on white is only 2.42:1. -->
+    <color name="brass">#FFC9A227</color>
+    <!-- Dark enough to be legible as text on white (5.74:1). -->
+    <color name="brass_deep">#FF7A6414</color>
+    <!-- Lifted for dark surfaces, where it reaches 10.12:1 on ink. -->
+    <color name="brass_lift">#FFE3BC42</color>
+
+    <!-- 14.77:1 on ink. -->
+    <color name="paper">#FFE8E6E1</color>
+    <!-- Sits on brass at 7.83:1. White on brass fails, so labels on brass use this. -->
+    <color name="ink_on_brass">#FF14100A</color>
+
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 </resources>
